@@ -6,9 +6,11 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="../lib/dbusjava.jar"/>
-	<classpathentry kind="lib" path="../lib/ev3classes.jar"/>
-	<classpathentry kind="lib" path="../lib/jsr305-3.0.2.jar"/>
-	<classpathentry kind="lib" path="../lib/Java-WebSocket-1.5.3.jar"/>
+	<classpathentry kind="lib" path="lib/dbusjava.jar"/>
+	<classpathentry kind="lib" path="lib/ev3classes.jar"/>
+	<classpathentry kind="lib" path="lib/Java-WebSocket-1.5.3.jar"/>
+	<classpathentry kind="lib" path="lib/jsr305-3.0.2.jar"/>
+	<classpathentry kind="lib" path="lib/slf4j-api-1.7.25.jar"/>
+	<classpathentry kind="lib" path="lib/slf4j-simple-1.7.25.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

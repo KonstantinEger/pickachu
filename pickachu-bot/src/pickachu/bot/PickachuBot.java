@@ -1,5 +1,8 @@
 package pickachu.bot;
 
+import java.net.URL;
+
+import lejos.hardware.Button;
 import pickachu.components.DataProvider;
 import pickachu.components.communication.Message;
 import pickachu.components.communication.MessageHandler;
@@ -12,14 +15,35 @@ public class PickachuBot {
 			@Override
 			public Message handle(Message message) {
 				switch (message.opCode) {
+				case Forward:
+					DataProvider.driverUnit().forward(extractRotations(message));
+					return null;
+				case Left:
+					DataProvider.driverUnit().left(extractRotations(message));
+					return null;
+				case Right:
+					DataProvider.driverUnit().right(extractRotations(message));
+					return null;
 				case NoOp:
 				default:
 					return null;
 				}
 			}
 		});
-		DataProvider.driverUnit().left(900);
-		//DataProvider.driverUnit().left(90);
-		//DataProvider.driverUnit().forward(5*360);
+		
+		URL lUrl = PickachuBot.class.getResource("/index.html");
+		System.out.println("OUR URL " + lUrl);
+		//Button.waitForAnyEvent()
+		
+		try {
+			Thread.sleep(Long.MAX_VALUE);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public static int extractRotations(Message message) {
+		return Integer.parseInt(message.content[0]);
 	}
 }

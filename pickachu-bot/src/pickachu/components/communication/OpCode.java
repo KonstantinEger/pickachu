@@ -9,7 +9,9 @@ import java.util.Map;
 public enum OpCode {
 	NoOp, //not viable
 	Stop,
-	Drive, // [(x,y), (x1,y1)]
+	Forward, // rotations
+	Left, // rotations
+	Right, // rotations
 	PickUp, // tells the robot to pick the object up
 	Drop, // tells the robot to drop the object
 	;

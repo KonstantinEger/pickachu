@@ -11,6 +11,7 @@ public class DataProvider {
 	public static synchronized CommunicationUnit communicationUnit() {
 		if (communicationUnit == null) {
 			communicationUnit = new CommunicationUnit();
+			communicationUnit.start();
 		}
 		return communicationUnit;
 	}

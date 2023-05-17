@@ -45,6 +45,7 @@ public class CommunicationUnit extends WebSocketServer {
 
 	@Override
 	public void onMessage(WebSocket sender, String message) {
+		 System.out.println(message);
 		 Message response = handler.handle(Message.parseStringToMessage(message));
 		 if (response != null && sender.isOpen()) {
 			 sender.send(response.parseMessageToString());

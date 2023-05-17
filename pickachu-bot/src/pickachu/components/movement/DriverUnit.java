@@ -65,13 +65,13 @@ public class DriverUnit {
 						new SimpleAction() {
 							@Override
 							public void execute() {
-								rightMotor.forward();;
+								rightMotor.rotate(degrees);
 							}
 						},
 						new SimpleAction() {
 							@Override
 							public void execute() {
-								leftMotor.forward();;
+								leftMotor.rotate(degrees);
 							}
 						}
 				);

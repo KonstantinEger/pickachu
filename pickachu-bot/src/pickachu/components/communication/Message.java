@@ -27,7 +27,11 @@ public class Message {
 	public static Message parseStringToMessage(String message) {
 		String[] array = message.split(separator);
 		String[] slice = Arrays.copyOfRange(array,1, array.length);
-		return new Message(OpCode.stringLookup.getOrDefault(array[0], OpCode.NoOp), slice);
+		OpCode code = OpCode.stringLookup.get(array[0]);
+		if (code == null) {
+			code = OpCode.NoOp;
+		}
+		return new Message(code, slice);
 	}
 	
 	public String parseMessageToString() {

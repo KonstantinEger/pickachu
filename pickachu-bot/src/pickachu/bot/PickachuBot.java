@@ -1,14 +1,15 @@
 package pickachu.bot;
 
-import java.net.URL;
+import java.io.IOException;
 
 import lejos.hardware.Button;
 import pickachu.components.DataProvider;
 import pickachu.components.communication.Message;
 import pickachu.components.communication.MessageHandler;
+import pickachu.webserver.Webserver;
 
 public class PickachuBot {
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 	
 		DataProvider.communicationUnit().setHandler(new MessageHandler() {
 			
@@ -31,19 +32,25 @@ public class PickachuBot {
 			}
 		});
 		
-		URL lUrl = PickachuBot.class.getResource("/index.html");
-		System.out.println("OUR URL " + lUrl);
-		//Button.waitForAnyEvent()
 		
-		try {
-			Thread.sleep(Long.MAX_VALUE);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		Webserver.getInstance().host();
+		
+		
+		shutdownOnEnterButtonClicked();
 	}
 	
 	public static int extractRotations(Message message) {
 		return Integer.parseInt(message.content[0]);
+	}
+	
+	public static void shutdownOnEnterButtonClicked(){
+		while (Button.waitForAnyPress() != Button.ID_ENTER) {
+			try {
+				Webserver.getInstance().kill();
+				DataProvider.communicationUnit().stop();
+			} catch (IOException | InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 }

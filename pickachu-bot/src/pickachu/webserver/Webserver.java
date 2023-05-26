@@ -7,13 +7,12 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.URISyntaxException;
-import java.net.URL;
+import java.net.URI;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
-import java.nio.file.Paths;
-
-
-import pickachu.bot.PickachuBot;
+import java.util.HashMap;
+import java.util.Map;
 
 
 public class Webserver {
@@ -23,10 +22,14 @@ public class Webserver {
 	private final Worker worker;
 	private boolean running;
 	private static Webserver instance;
+	private final Map<String, String> env;
+	private final FileSystem fileSystem;
 
 	private Webserver() throws IOException{
 		socket = new ServerSocket(port);
 		worker = new Worker();
+		env = new HashMap<>();
+		fileSystem = FileSystems.newFileSystem(URI.create("jar:file:/home/lejos/programs/PickachuBot.jar"), env);
 	}
 	
 
@@ -47,26 +50,73 @@ public class Webserver {
     }
     
     private class Worker extends Thread {
+    	    	
     	
     	@Override
     	public void run() {
     		while (running) {
     			try {
+    				// read request
 					Socket client =  socket.accept();
 					BufferedReader reader = new BufferedReader(new InputStreamReader(client.getInputStream()));
 					String firstLine =  reader.readLine();
 					String requestedResource = firstLine.split(" ")[1];
 					
-					URL resourceUrl = PickachuBot.class.getResource(requestedResource);
-					byte[] encodedBytes = Files.readAllBytes(Paths.get(resourceUrl.toURI()));
-					
+					// write response
+					Response response = new Response(requestedResource);
 					BufferedWriter writer =  new BufferedWriter(new OutputStreamWriter(client.getOutputStream()));
-					writer.write(new String(encodedBytes));
-				} catch (IOException | URISyntaxException e) {
-					// TODO Auto-generated catch block
+					writer.write(response.asString());
+					writer.flush();
+					
+					// close resources
+					writer.close();
+					reader.close();
+				} catch (IOException e) {
 					e.printStackTrace();
 				}
     		}
     	}
     }
+    	
+	class Response {
+		
+		public String OK = "HTTP/1.1 200 OK \r\n"; 
+		public String Error404 = "HTTP/1.1 404 Not Found \r\n";
+		private StringBuilder requestBuilder = new StringBuilder();
+		
+		public Response(String requestedFileName) {
+			byte[] encodedBytes;
+			String message = "";
+			try {
+				encodedBytes = Files.readAllBytes(fileSystem.getPath(requestedFileName));
+				message = new String(encodedBytes);
+				requestBuilder.append(OK);
+			} catch (IOException e) {
+				requestBuilder.append(Error404);
+				e.printStackTrace();
+			}
+			requestBuilder.append(getContentLengthFor(message));
+			requestBuilder.append(getContentTypeFor(requestedFileName));
+			requestBuilder.append(message);
+		}
+	    		
+		
+		public String getContentLengthFor(String message) {
+			return "Content-Length: " + message.length() + "\r\n";
+		}
+		
+		
+		private String getContentTypeFor(String file) {
+			if (file.endsWith(".js")) {
+				return "Content-Type: text/javascript \r\n\r\n";
+			} else if (file.endsWith(".html")) {
+				return "Content-Type: text/html \r\n\r\n";
+			}
+			return "Content-Type: text/plain \r\n\r\n";
+		}
+		
+		public String asString() {
+			return requestBuilder.toString();
+		}
+	}
 }

@@ -1,1 +1,17 @@
-hello world
+<html>
+	<head>
+		<title>rtsp example</title>
+		<script src="https://cdn.jsdelivr.net/npm/rtsp-relay@1.7.0/browser/index.js"></script>
+		<script src="https://docs.opencv.org/4.x/opencv.js"></script>
+	</head>
+	<body>
+		<button id="btn1">start stream</button>
+		<button id="btn2">start opencv</button>
+		<canvas id="original" style=""></canvas>
+		<canvas id="gray"></canvas>
+		<canvas id="diff"></canvas>
+		<canvas id="wo-fisheye"></canvas>
+
+		<script src="./client.js"></script>
+	</body>
+</html>

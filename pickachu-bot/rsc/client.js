@@ -1,8 +1,9 @@
 const streamcanvas = document.getElementById("original");
 
 document.getElementById("btn1").addEventListener("click", () => {
+	const urlInput = document.querySelector("#stream-input");
 	loadPlayer({
-		url: 'ws://' + location.host + '/api/stream',
+		url: urlInput.value,
 		canvas: streamcanvas,
 		disableGl: true
 	});

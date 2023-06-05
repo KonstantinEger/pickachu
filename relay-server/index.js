@@ -1,5 +1,6 @@
 const express = require('express');
 const fs = require("fs");
+const path = require("path");
 const app = express();
 
 const { proxy, scriptUrl } = require('rtsp-relay')(app);
@@ -11,19 +12,9 @@ const handler = proxy({
 	verbose: true,
 });
 
+app.use(express.static(path.join(__dirname, "../pickachu-bot/rsc/")));
+
 // the endpoint our RTSP uses
 app.ws('/api/stream', handler);
-
-app.get('/client.js', (req, res) =>{
-	const filename = "client.js";
-	const html = fs.readFileSync(filename, { encoding: "utf-8" });
-	res.send(html);
-});
-// this is an example html page to view the stream
-app.get('/', (req, res) =>{
-	const filename = "index.html";
-	const html = fs.readFileSync(filename, { encoding: "utf-8" });
-	res.send(html);
-});
 
 app.listen(2000);

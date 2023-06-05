@@ -1,12 +1,14 @@
 package pickachu.components;
 
 import pickachu.components.communication.CommunicationUnit;
-import pickachu.components.movement.DriverUnit;
+import pickachu.components.motors.DriverUnit;
+import pickachu.components.motors.PickupUnit;
 
 public class DataProvider {
 	
 	private static CommunicationUnit communicationUnit;
 	private static DriverUnit driverUnit;
+	private static PickupUnit pickupUnit;
 	
 	public static synchronized CommunicationUnit communicationUnit() {
 		if (communicationUnit == null) {
@@ -21,5 +23,12 @@ public class DataProvider {
 			driverUnit = new DriverUnit();
 		}
 		return driverUnit;
+	}
+	
+	public static synchronized PickupUnit pickupUnit() {
+		if (pickupUnit == null) {
+			pickupUnit = new PickupUnit();
+		}
+		return pickupUnit;
 	}
 }

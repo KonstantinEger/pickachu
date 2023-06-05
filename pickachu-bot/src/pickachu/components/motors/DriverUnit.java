@@ -1,4 +1,4 @@
-package pickachu.components.movement;
+package pickachu.components.motors;
 
 import java.util.Arrays;
 import java.util.List;
@@ -22,7 +22,7 @@ public class DriverUnit {
 	
 	
 	public DriverUnit() {
-		leftMotor = new EV3MediumRegulatedMotor(MotorPort.A);
+		leftMotor = new EV3MediumRegulatedMotor(MotorPort.A);  // todo das sollten large motoren sein
 		rightMotor = new EV3MediumRegulatedMotor(MotorPort.B);
 		bus = new LinkedBlockingQueue<Action>();
 		driver = new Worker(bus, 2);

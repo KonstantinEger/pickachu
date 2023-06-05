@@ -1,4 +1,6 @@
 .metadata
 bin/
 node_modules/
-
+.idea
+PickachuBot.jar
+.settings/

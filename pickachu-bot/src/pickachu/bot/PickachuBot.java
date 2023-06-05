@@ -25,6 +25,12 @@ public class PickachuBot {
 				case Right:
 					DataProvider.driverUnit().right(extractRotations(message));
 					return null;
+				case PickUp:
+					DataProvider.pickupUnit().pickUp();
+					return null;
+				case Drop:
+					DataProvider.pickupUnit().drop();
+					return null;
 				case NoOp:
 				default:
 					return null;
@@ -34,17 +40,6 @@ public class PickachuBot {
 		
 		
 		Webserver.getInstance().host();
-		
-		// test
-		
-		DataProvider.pickupUnit().pickUp();
-		try {
-			Thread.sleep(2000);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		DataProvider.pickupUnit().drop();
 
 		
 		shutdownOnEnterButtonClicked();

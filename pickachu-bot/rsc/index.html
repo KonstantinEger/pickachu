@@ -5,14 +5,21 @@
 		<script src="https://docs.opencv.org/4.x/opencv.js"></script>
 	</head>
 	<body>
-		<input type="text" placeholder="ws://path:to/your/stream" id="stream-input">
+		<input type="text" placeholder="ws://path:to/your/stream" value="ws://localhost:2000/api/stream" id="stream-input">
+		<input type="file" multiple id="image-input">
 		<button id="btn1">start stream</button>
 		<button id="btn2">start opencv</button>
-		<canvas id="original" style=""></canvas>
+		<br>
+		<canvas id="original" style="" width="1024" height="768"></canvas>
+		<br>
 		<canvas id="gray"></canvas>
+		<br>
 		<canvas id="diff"></canvas>
+		<br>
 		<canvas id="wo-fisheye"></canvas>
+		<canvas id="yellow-lower"></canvas>
+		<canvas id="yellow-upper"></canvas>
 
-		<script src="./client.js"></script>
+		<script src="./client.js" type="module"></script>
 	</body>
 </html>

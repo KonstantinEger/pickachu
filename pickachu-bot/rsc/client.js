@@ -1,6 +1,19 @@
 import { PathService } from "./paths.js";
+import { AppState } from "./state.js";
 
-const streamcanvas = document.getElementById("original");
+const appState = new AppState(
+    document.querySelector("#stream-input"),
+    document.querySelector("#original"),
+    // calculate every n frames:
+    7,
+);
+
+/**
+ * @param {number} alpha
+ */
+function rad2deg(alpha) {
+    return alpha * 180 / Math.PI;
+}
 
 /**
  * @param {{ x: number, y: number }} vec
@@ -9,6 +22,18 @@ const streamcanvas = document.getElementById("original");
 function vec2scale(vec, t) {
 	vec.x *= t;
 	vec.y *= t;
+}
+
+/**
+ * @param {{ x: number, y: number }} a
+ * @param {{ x: number, y: number }} b
+ * @returns {{ x: number, y: number }}
+ */
+function vec2add(a, b) {
+	return {
+		x: b.x + a.x,
+		y: b.y + a.y,
+	};
 }
 
 /**
@@ -32,11 +57,10 @@ function vec2len(vec) {
 }
 
 document.getElementById("btn1").addEventListener("click", () => {
-	const urlInput = document.querySelector("#stream-input");
-	if (!urlInput.value) {
+	if (!appState.shouldStreamFromUrl()) {
 		const imageInput = document.querySelector("#image-input");
-		const file = imageInput.files[0];
-		const ctx = streamcanvas.getContext("2d");
+		const file = imageInput?.files[0];
+		const ctx = appState.streamCanvas().getContext("2d");
 		const img = new Image();
 		img.onload = () => {
 			ctx.drawImage(img, 0, 0);
@@ -44,8 +68,8 @@ document.getElementById("btn1").addEventListener("click", () => {
 		img.src = URL.createObjectURL(file);
 	} else {
 		loadPlayer({
-			url: urlInput.value,
-			canvas: streamcanvas,
+			url: appState.streamUrl(),
+			canvas: appState.streamCanvas(),
 			disableGl: true
 		});
 	}
@@ -106,6 +130,7 @@ document.getElementById("btn2").addEventListener("click", () => {
 // cv.Size(width, height) für DIM
 
 const finalCanvas = document.querySelector("#wo-fisheye");
+/** @type {CanvasRenderingContext2D} */
 const finalCanvasCtx = finalCanvas.getContext("2d");
 
 const pathService = new PathService({
@@ -135,36 +160,56 @@ function findRobo(original) {
 	cv.morphologyEx(roboHelperRed, roboHelperRed, cv.MORPH_OPEN, M, anchor, 4, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
 	cv.morphologyEx(roboHelperGreen, roboHelperGreen, cv.MORPH_OPEN, M, anchor, 4, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
 
+    const foundRedPositions = [];
+    const foundGreenPositions = [];
+
 	const contours = new cv.MatVector();
 	const hierarchy = new cv.Mat();
 	cv.findContours(roboHelperRed, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
     if (contours.size() > 0) {
-        redPos = cv.minAreaRect(contours.get(0)).center;
+        for (let i = 0; i < contours.size(); i++)
+            foundRedPositions.push(cv.minAreaRect(contours.get(i)).center);
     }
 	cv.findContours(roboHelperGreen, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
     if (contours.size() > 0) {
-        greenPos = cv.minAreaRect(contours.get(0)).center;
+        for (let i = 0; i < contours.size(); i++)
+            foundGreenPositions.push(cv.minAreaRect(contours.get(i)).center);
     }
+
+    if (foundRedPositions.length === 0 || foundGreenPositions.length === 0) return;
+
+    let minDiff = Infinity;
+    for (const r of foundRedPositions) {
+        for (const g of foundGreenPositions) {
+            const dist = vec2len(vec2dir(r, g));
+            const diff = Math.abs(dist - 50);
+            if (diff < minDiff) {
+                minDiff = diff;
+                redPos = r;
+                greenPos = g;
+            }
+        }
+    }
+
+    const r2g = vec2dir(redPos, greenPos);
+    vec2scale(r2g, 0.5);
+    const center = vec2add(redPos, r2g);
+    const dir = { x: r2g.y, y: -r2g.x };
+
+    appState.setRoboPosAndDir(center, dir);
+
+    finalCanvasCtx.fillStyle = "#00ff00";
+
+    const dirLen = vec2len(dir);
+    const angle = dir.y > 0 ? Math.acos(dir.x / dirLen) : 2*Math.PI - Math.acos(dir.x / dirLen); 
 
     contours.delete();
     hierarchy.delete();
     M.delete();
 }
 
-function displayCanvasLoop() {
-	const mat = cv.imread(streamcanvas);
-
-	if (!woFisheye) {
-		woFisheye = mat.clone();
-	}
-
-
-	cv.remap(mat, woFisheye, map1, map2, cv.INTER_LINEAR, cv.BORDER_CONSTANT);
-
-    findRobo(woFisheye);
-
+function obsticleDetection() {
 	cv.cvtColor(woFisheye, gray, cv.COLOR_RGBA2GRAY, 0);
-	// cv.imshow("gray", gray);
 
 	if (!originalForDiff) {
 		originalForDiff = gray.clone();
@@ -184,7 +229,6 @@ function displayCanvasLoop() {
 	const hierarchy = new cv.Mat();
 	cv.findContours(gray, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
 
-	cv.imshow("wo-fisheye", woFisheye);
 
 	finalCanvasCtx.save();
 	pathService.resetTiles();
@@ -222,13 +266,31 @@ function displayCanvasLoop() {
 	}
 	finalCanvasCtx.restore();
 
-	pathService.drawToCanvas(finalCanvasCtx);
-
-    finalCanvasCtx.fillRect(redPos?.x, redPos?.y, 10, 10);
-    finalCanvasCtx.fillRect(greenPos?.x, greenPos?.y, 10, 10);
-
 	contours.delete();
 	hierarchy.delete();
+
+}
+
+function displayCanvasLoop() {
+    appState.incFrameCount();
+
+	const mat = cv.imread(appState.streamCanvas());
+
+	if (!woFisheye) {
+		woFisheye = mat.clone();
+	}
+
+
+	cv.remap(mat, woFisheye, map1, map2, cv.INTER_LINEAR, cv.BORDER_CONSTANT);
+
+	cv.imshow("wo-fisheye", woFisheye);
+
+    if (appState.isCalculationFrame()) {
+        findRobo(woFisheye);
+        obsticleDetection();
+    }
+
+	pathService.drawToCanvas(finalCanvasCtx);
 
 	mat.delete();
 	setTimeout(() => {

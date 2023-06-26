@@ -92,7 +92,7 @@ export class PathService {
 
 		for (const tile of this.tiles) {
 			ctx.fillStyle = tile.occupied ? "rgba(255, 0, 0, 0.1)" : "rgba(0, 0, 0, 0)";
-			ctx.strokeStyle = "#ffff00";
+			ctx.strokeStyle = "#ffff0030";
 			ctx.beginPath();
 			ctx.rect(tile.x, tile.y, this.tileSize.width, this.tileSize.height);
 			ctx.closePath();

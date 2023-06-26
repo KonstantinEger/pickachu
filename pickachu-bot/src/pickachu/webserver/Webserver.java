@@ -7,12 +7,9 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.URI;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
-import java.util.HashMap;
-import java.util.Map;
+
+import pickachu.components.DataProvider;
 
 
 public class Webserver {
@@ -22,14 +19,10 @@ public class Webserver {
 	private final Worker worker;
 	private boolean running;
 	private static Webserver instance;
-	private final Map<String, String> env;
-	private final FileSystem fileSystem;
 
 	private Webserver() throws IOException{
 		socket = new ServerSocket(port);
 		worker = new Worker();
-		env = new HashMap<>();
-		fileSystem = FileSystems.newFileSystem(URI.create("jar:file:/home/lejos/programs/PickachuBot.jar"), env);
 	}
 	
 
@@ -88,7 +81,7 @@ public class Webserver {
 			byte[] encodedBytes;
 			String message = "";
 			try {
-				encodedBytes = Files.readAllBytes(fileSystem.getPath(requestedFileName));
+				encodedBytes = Files.readAllBytes(DataProvider.getFileSystem().getPath(requestedFileName));
 				message = new String(encodedBytes);
 				requestBuilder.append(OK);
 			} catch (IOException e) {

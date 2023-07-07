@@ -2,7 +2,6 @@ package pickachu.components;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -12,70 +11,78 @@ import java.util.concurrent.Future;
 /**
  * A Worker is a Thread that runs and works on Actions that arrive via the bus.
  */
-public class Worker extends Thread{
+public class Worker {
 
-	BlockingQueue<Action> bus;
-	private boolean running = true;
 	private final ExecutorService coWorkers;
 	
-	public Worker(BlockingQueue<Action> bus, int coWorkers) {
-		this.bus = bus;
-		this.coWorkers = Executors.newFixedThreadPool(coWorkers);
-		this.start();
+	/**
+	 * @param coWorkers : The number of Threads that are needed for a Componenet to be able to operate in parallel
+	 * lets say you want to operate two motors - then you need two coworkers.
+	 */
+	public Worker(int coWorkers) {
+		// needs one extra thread for self
+		this.coWorkers = Executors.newFixedThreadPool(coWorkers+1);
 	}
 	
 	/**
 	 * Kills the thread without chance of reactivation
 	 */
-	public void kill() {
-		this.running = false;
+	public void stop() {
+		coWorkers.shutdown();
 	}
 	
 	
-	/**
-	 * Interrupts the worker and clears the bus
-	 * The worker should immediately become available again
-	 */
-	@Override
-	public void interrupt() {
-		bus.clear();
-		super.interrupt();
-	}
-	
-	@Override
-	public void run() {
-		while(running) {
-			try {
-				Action action = bus.take();
-				if (action instanceof SimpleAction) {
-					SimpleAction simpleAction = (SimpleAction) action;
-					simpleAction.execute();
-				}else if (action instanceof MultiAction) {
-					MultiAction multiAction = (MultiAction) action;
-					List<Future<?>> futures = new ArrayList<>();
-					
-					// submit each action to a CoWorker and start it
-					for (final SimpleAction simpleAction : multiAction.getActions()) {
-						Runnable task = new Runnable() {
-							@Override
-							public void run() {
-								simpleAction.execute();
-							}
-						};
-						
-						futures.add(coWorkers.submit(task));
-					}
-					
-					// ensure the worker is waiting for its CoWorkers
-					for (Future<?> future: futures) {
-						try {
-							future.get();
-						} catch (ExecutionException e) {
-							e.printStackTrace();
-						}
-					}
-				}
-			} catch (InterruptedException e) {}
+	public Future<?> submit(Action action) {
+		Future<?> collector;
+		
+		if (action instanceof SimpleAction) {
+			final SimpleAction simpleAction = (SimpleAction) action;
+			collector = simpleActionHelper(simpleAction);
+		}else {
+			MultiAction multiAction = (MultiAction) action;
+			collector = multiActionHelper(multiAction);
 		}
+		
+		return collector;
 	}
+	
+	
+	private Future<?> simpleActionHelper(final SimpleAction action){
+		Runnable task = new Runnable() {
+			@Override
+			public void run() {
+				action.execute();
+			}
+		};
+		
+		return coWorkers.submit(task);
+	}
+	
+	private Future<?> multiActionHelper(final MultiAction action) {
+		final List<Future<?>> futures = new ArrayList<>();
+		
+		// submit each action to a CoWorker and start it
+		for (final SimpleAction simpleAction : action.getActions()) {
+			Future<?> future = simpleActionHelper(simpleAction);
+			futures.add(future);
+		}
+		
+		// This future will be completed once all the other futures have been completed.
+		Runnable collector = new Runnable() {
+			@Override
+			public void run() {
+				// ensure the worker is waiting for its CoWorkers
+				for (Future<?> future: futures) {
+					try {
+						future.get();
+					} catch (ExecutionException | InterruptedException e) {
+						e.printStackTrace();
+					}
+				}				
+			}
+		};
+		
+		return coWorkers.submit(collector);
+	}
+	
 }

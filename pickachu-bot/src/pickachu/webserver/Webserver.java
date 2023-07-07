@@ -10,9 +10,10 @@ import java.net.Socket;
 import java.nio.file.Files;
 
 import pickachu.components.DataProvider;
+import pickachu.components.Disposable;
 
 
-public class Webserver {
+public class Webserver implements Disposable{
 	
 	public static final int port = 8080;
 	private final ServerSocket socket;
@@ -38,7 +39,8 @@ public class Webserver {
 		worker.start();
     }
     
-    public void kill() {
+	@Override
+    public void dispose() {
     	running = false;
     	instance = null;
     }

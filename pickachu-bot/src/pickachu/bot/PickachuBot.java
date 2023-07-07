@@ -1,6 +1,7 @@
 package pickachu.bot;
 
 import java.io.IOException;
+
 import lejos.hardware.Button;
 import pickachu.components.DataProvider;
 import pickachu.components.Observer;
@@ -35,9 +36,6 @@ public class PickachuBot {
 				case Drop:
 					DataProvider.pickupUnit().drop();
 					DataProvider.soundUnit().playSound(Sounds.BattleWin);
-					return acknowledge(message);
-				case Stop:
-					DataProvider.driverUnit().stop();
 					return acknowledge(message);
 				case NoOp:
 				default:
@@ -83,12 +81,13 @@ public class PickachuBot {
 		while (Button.waitForAnyPress() == Button.ID_ENTER) {
 			System.out.print("Enter button registered");
 			try {
-				Webserver.getInstance().kill();
+				Webserver.getInstance().dispose();
 				DataProvider.driverUnit().dispose();
-				DataProvider.orientationUnit().stop();
-				DataProvider.communicationUnit().stop();
+				DataProvider.pickupUnit().dispose();
+				DataProvider.orientationUnit().dispose();
+				DataProvider.communicationUnit().dispose();
 				System.exit(0);
-			} catch (IOException | InterruptedException e) {
+			} catch (IOException e) {
 				System.out.print("In Error state");
 				e.printStackTrace();
 			}

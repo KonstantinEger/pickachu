@@ -1,5 +1,7 @@
 // @ts-check
 
+import { Log } from "./log.js";
+
 class Tile {
 	constructor({ occupied, x, y } = { occupied: false, x: 0, y: 0 }) {
 		this.occupied = occupied;
@@ -27,7 +29,13 @@ export class Command {
 
 
 export class PathService {
-	constructor({ gridSize, ntiles }) {
+    /**
+     * @param { any } a
+     * @param { Log } log 
+     */
+	constructor({ gridSize, ntiles }, log) {
+        /** @private */
+        this._log = log;
 		this.gridSize = gridSize;
 		this.tileSize = {
 			width: Math.floor(gridSize.width / ntiles.x),
@@ -63,11 +71,12 @@ export class PathService {
      * @returns {Command[]}
      */
     calculatePath(roboPos, roboDir, roboDirDefault, targetPos) {
+        this._log.info("calculating path", { roboPos, roboDir, roboDirDefault, targetPos });
         // Mark occupied fields around the robo to not be occupied
         const [rTileX, rTileY] = this.imageToTileCoords(roboPos.x, roboPos.y);
         const rIdx = this.tileCoordsToIndex(rTileX, rTileY);
-        for (let i = rTileX-1; i <= rTileX+1; i++) {
-            for (let j = rTileY-1; j <= rTileY+1; j++) {
+        for (let i = rTileX-2; i <= rTileX+2; i++) {
+            for (let j = rTileY-2; j <= rTileY+2; j++) {
                 const idx = this.tileCoordsToIndex(i, j);
                 if (idx < 0 || this.tiles.length <= idx) {
                     continue;
@@ -113,17 +122,23 @@ export class PathService {
 
         // Build path of indices
         const path = [];
-        let currIdx = this.tileCoordsToIndex(tTileX, tTileY);
+        const targetIndex = this.tileCoordsToIndex(tTileX, tTileY);
+        let currIdx = this.tiles[targetIndex].reachableThrough;
         while (currIdx !== rIdx) {
+            if (currIdx < 0) {
+                this._log.warn("could not reach target", {});
+                return [];
+            }
             path.unshift(currIdx);
             currIdx = this.tiles[currIdx].reachableThrough;
         }
-        console.log(path);
-        console.log(path.map(this.indexToCoords.bind(this)));
+        this._log.debug("indices of path", { path });
+        this._log.debug("coords of path", { path: path.map(this.indexToCoords.bind(this)) });
 
         /** @type {Command[]} */
         const commands = [];
         let normDir = roboDirDefault - roboDir;
+        this._log.debug("rotations", { normDir, roboDirDefault, roboDir });
 
         // debugger;
         // const movementLength = 187; // für 30x25

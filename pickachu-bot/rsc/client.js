@@ -1,22 +1,30 @@
 import { PathService } from "./paths.js";
 import { AppState } from "./state.js";
+import { Log, LEVEL_DEBUG } from "./log.js";
+
+const LOGLEVEL = LEVEL_DEBUG;
+const cvlog = new Log("OpenCV", LOGLEVEL);
 
 const appState = new AppState(
     document.querySelector("#stream-input"),
     document.querySelector("#original"),
     // calculate every n frames:
     1,
-    new PathService({
-        gridSize: {
-            width: 1024,
-            height: 768
+    new PathService(
+        {
+            gridSize: {
+                width: 1024,
+                height: 768
+            },
+            ntiles: {
+                x: 40,
+                y: 35,
+            },
         },
-        ntiles: {
-            x: 40,
-            y: 35,
-        }
-    }),
+        new Log("PathService", LOGLEVEL),
+    ),
     startWebSocket(),
+    new Log("AppState", LOGLEVEL),
 );
 
 /**
@@ -103,11 +111,19 @@ function startWebSocket() {
             const degs = parseInt(params[0]);
             console.debug({ msg: "setting robo dir", degs });
             appState.setRoboDir(degs);
+        } else if (type === "Ack" && params[0] === "Forward" && appState.isOnRoute()) {
+            const commands = appState.pathService().calculatePath(appState.roboPos(), appState.roboDir(), appState.roboDirDefault(), appState.targetPos());
+            if (commands.length < 2) {
+                appState.setOnRoute(false);
+            } else {
+                appState.ws().send(commands[0].toString());
+                appState.ws().send(commands[1].toString());
+            }
         }
     };
 
     ws.onopen = (event) => {
-        console.info({ msg: "connected to ws", event });
+        cvlog.info("connected to ws", { event });
     };
 
     ws.onclose = (event) => {
@@ -180,10 +196,13 @@ document.getElementById("calibrate-btn").addEventListener("click", () => {
 
 document.getElementById("wo-fisheye").addEventListener("click", (event) => {
     const pos = getMousePos(event.target, event);
+    appState.setTargetPos(pos.x, pos.y);
     const commands = appState.pathService().calculatePath(appState.roboPos(), appState.roboDir(), appState.roboDirDefault(), pos);
-    console.debug({ msg: "sending commands", commands });
-    for (const cmd of commands) {
-        appState.ws().send(cmd.toString());
+    cvlog.debug("commands after click", { commands });
+    if (commands.length > 0) {
+        appState.setOnRoute(true);
+        appState.ws().send(commands[0].toString());
+        appState.ws().send(commands[1].toString());
     }
 });
 

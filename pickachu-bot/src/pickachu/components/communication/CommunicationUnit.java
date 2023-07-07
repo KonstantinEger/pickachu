@@ -20,6 +20,13 @@ public class CommunicationUnit extends WebSocketServer {
 		super(address);
 	}
 	
+	/**
+	 * Sends a message to a client. TODO this is currently implemented as broadcast.
+	 * Because the applications behavior with multiple clients is currently undefined.
+	 */
+	public void broadcast(Message message) {
+		broadcast(message.parseMessageToString(), getConnections());
+	}
 	
 	/**
 	 * Sets the handler responsible for handling incoming messages

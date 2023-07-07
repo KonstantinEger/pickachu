@@ -4,8 +4,10 @@ import java.io.IOException;
 
 import lejos.hardware.Button;
 import pickachu.components.DataProvider;
+import pickachu.components.Observer;
 import pickachu.components.communication.Message;
 import pickachu.components.communication.MessageHandler;
+import pickachu.components.communication.OpCode;
 import pickachu.webserver.Webserver;
 
 public class PickachuBot {
@@ -38,9 +40,18 @@ public class PickachuBot {
 			}
 		});
 		
+		DataProvider.orientationUnit().registerObservers(new Observer<Float>() {
+			@Override
+			public void onValueChange(Float value) {
+				DataProvider.communicationUnit().broadcast(new Message(OpCode.Gyro, new String[]{value + ""}));				
+			}
+		});
+		
 		
 		Webserver.getInstance().host();
-
+		
+		//DataProvider.soundUnit(); todo does not work
+		
 		
 		shutdownOnEnterButtonClicked();
 	}
@@ -54,6 +65,7 @@ public class PickachuBot {
 			try {
 				Webserver.getInstance().kill();
 				DataProvider.communicationUnit().stop();
+				DataProvider.orientationUnit().stop();
 			} catch (IOException | InterruptedException e) {
 				e.printStackTrace();
 			}

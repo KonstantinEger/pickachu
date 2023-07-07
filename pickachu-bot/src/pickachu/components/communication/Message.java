@@ -24,6 +24,7 @@ public class Message {
 		this.content = content;
 	}
 	
+	
 	public static Message parseStringToMessage(String message) {
 		String[] array = message.split(separator);
 		String[] slice = Arrays.copyOfRange(array,1, array.length);

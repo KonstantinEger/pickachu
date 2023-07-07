@@ -7,7 +7,8 @@ import lejos.hardware.motor.EV3MediumRegulatedMotor;
 import lejos.hardware.port.MotorPort;
 import lejos.robotics.RegulatedMotor;
 import pickachu.components.Worker;
-import pickachu.components.Actions.*;
+import pickachu.components.Action;
+import pickachu.components.SimpleAction;
 
 public class PickupUnit {
 	

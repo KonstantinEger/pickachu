@@ -14,6 +14,7 @@ public enum OpCode {
 	Right, // rotations
 	PickUp, // tells the robot to pick the object up
 	Drop, // tells the robot to drop the object
+	Gyro // tells the server where the robot is
 	;
 	
 	public static Map <String, OpCode> stringLookup = new HashMap<>();

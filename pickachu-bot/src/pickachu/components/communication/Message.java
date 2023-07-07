@@ -36,6 +36,11 @@ public class Message {
 	}
 	
 	public String parseMessageToString() {
-		return opCode.name() + separator + String.join(separator, content);
+		StringBuilder sBuilder = new StringBuilder(opCode.name());
+		for (String data: content) {
+			sBuilder.append(separator);
+			sBuilder.append(data);
+		}
+		return sBuilder.toString();
 	}
 }

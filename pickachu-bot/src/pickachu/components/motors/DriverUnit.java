@@ -27,6 +27,10 @@ public class DriverUnit {
 	public DriverUnit() {
 		leftMotor = new EV3MediumRegulatedMotor(MotorPort.A);  // todo das sollten large motoren sein
 		rightMotor = new EV3MediumRegulatedMotor(MotorPort.B);
+		//leftMotor.setSpeed(250);
+		//rightMotor.setSpeed(250);
+		leftMotor.setSpeed(150);
+		rightMotor.setSpeed(150);
 		bus = new LinkedBlockingQueue<Action>();
 		driver = new Worker(bus, 2);
 	}
@@ -82,9 +86,13 @@ public class DriverUnit {
 		});
 	}
 	
+	public void stop() {
+		bus.clear();
+	}
 	
+
 	public void dispose() {
 		driver.kill();
-		bus.clear();
+		stop();
 	}
 }

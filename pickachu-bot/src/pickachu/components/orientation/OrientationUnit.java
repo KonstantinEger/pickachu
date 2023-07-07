@@ -20,8 +20,12 @@ public class OrientationUnit {
 		public OrientationUnit() {
 			gyroSensor = new EV3GyroSensor(SensorPort.S1);
 			sampleProvider = gyroSensor.getAngleMode();
-			worker = new Worker();
+
 			observers = new HashSet<>();
+			
+			running = true;
+			worker = new Worker();
+			worker.start();
 		}
 		
 		public synchronized float getRotation() {

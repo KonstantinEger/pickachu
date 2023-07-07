@@ -17,7 +17,7 @@ public class Webserver {
 	public static final int port = 8080;
 	private final ServerSocket socket;
 	private final Worker worker;
-	private boolean running;
+	private volatile boolean running;
 	private static Webserver instance;
 
 	private Webserver() throws IOException{
@@ -40,6 +40,7 @@ public class Webserver {
     
     public void kill() {
     	running = false;
+    	instance = null;
     }
     
     private class Worker extends Thread {

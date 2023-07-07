@@ -18,6 +18,7 @@ public class CommunicationUnit extends WebSocketServer {
 	
 	public CommunicationUnit() {
 		super(address);
+		setReuseAddr(true);
 	}
 	
 	/**

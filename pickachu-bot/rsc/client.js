@@ -5,7 +5,18 @@ const appState = new AppState(
     document.querySelector("#stream-input"),
     document.querySelector("#original"),
     // calculate every n frames:
-    7,
+    1,
+    new PathService({
+        gridSize: {
+            width: 1024,
+            height: 768
+        },
+        ntiles: {
+            x: 40,
+            y: 35,
+        }
+    }),
+    startWebSocket(),
 );
 
 /**
@@ -56,7 +67,10 @@ function vec2len(vec) {
 	return Math.sqrt(vec.x*vec.x + vec.y*vec.y);
 }
 
+// start stream btn
 document.getElementById("btn1").addEventListener("click", () => {
+    // startWebSocket();
+
 	if (!appState.shouldStreamFromUrl()) {
 		const imageInput = document.querySelector("#image-input");
 		const file = imageInput?.files[0];
@@ -75,6 +89,33 @@ document.getElementById("btn1").addEventListener("click", () => {
 	}
 });
 
+function startWebSocket() {
+    const ws = new WebSocket(`ws://141.46.137.146:8081/`);
+
+    ws.onerror = (event) => {
+        console.error({ msg: "ws error occurred", event });
+    };
+
+    ws.onmessage = (event) => {
+        console.debug({ msg: "got ws msg", event });
+        const [type, ...params] = event.data.split(":");
+        if (type === "Gyro") {
+            const degs = parseInt(params[0]);
+            console.debug({ msg: "setting robo dir", degs });
+            appState.setRoboDir(degs);
+        }
+    };
+
+    ws.onopen = (event) => {
+        console.info({ msg: "connected to ws", event });
+    };
+
+    ws.onclose = (event) => {
+        console.info({ msg: "ws closed", event });
+    };
+    return ws;
+}
+
 let DIM;
 let K;
 let D;
@@ -85,13 +126,22 @@ let originalForDiff;
 let gray;
 
 let roboHelper;
-let roboHelperRed;
-let roboHelperGreen;
-let redLower;
-let redUpper;
-let greenLower;
-let greenUpper;
+let yellowMask;
+let yellowLower;
+let yellowUpper;
 
+function  getMousePos(canvas, evt) {
+  var rect = canvas.getBoundingClientRect(), // abs. size of element
+    scaleX = canvas.width / rect.width,    // relationship bitmap vs. element for x
+    scaleY = canvas.height / rect.height;  // relationship bitmap vs. element for y
+
+  return {
+    x: (evt.clientX - rect.left) * scaleX,   // scale mouse coordinates after they have
+    y: (evt.clientY - rect.top) * scaleY     // been adjusted to be relative to element
+  }
+}
+
+// start opencv
 document.getElementById("btn2").addEventListener("click", () => {
 	DIM = new cv.Size(1024, 768);
 	K = cv.matFromArray(3, 3, cv.CV_32F, [26864.957112648033, 0.0, 462.391611030626, 0.0, 26100.130628757528, 355.3302327869351, 0.0, 0.0, 1.0]);
@@ -102,22 +152,19 @@ document.getElementById("btn2").addEventListener("click", () => {
 	cv.fisheye_initUndistortRectifyMap(K, D, cv.Mat.eye(3, 3, cv.CV_32FC1), K, DIM, cv.CV_16SC2, map1, map2);
 
     roboHelper = new cv.Mat();
-    roboHelperRed = new cv.Mat();
-    roboHelperGreen = new cv.Mat();
+    yellowMask = new cv.Mat();
     // // yellow
-    // const low = new cv.Scalar(20, 100, 100);
-    // const high = new cv.Scalar(40, 200, 200);
+    const low = new cv.Scalar(20, 100, 100);
+    const high = new cv.Scalar(40, 200, 200);
     // // red
-    const redlow = new cv.Scalar(0, 100, 100);
-    const redhigh = new cv.Scalar(20, 255, 255);
-    // // green
-    const greenlow = new cv.Scalar(50, 50, 50);
-    const greenhigh = new cv.Scalar(70, 255, 255);
+    // const redlow = new cv.Scalar(0, 100, 100);
+    // const redhigh = new cv.Scalar(20, 255, 255);
+    // // // green
+    // const greenlow = new cv.Scalar(50, 50, 50);
+    // const greenhigh = new cv.Scalar(70, 255, 255);
 
-    redLower = new cv.Mat(768, 1024, cv.CV_8UC3, redlow);
-    redUpper = new cv.Mat(768, 1024, cv.CV_8UC3, redhigh);
-    greenLower = new cv.Mat(768, 1024, cv.CV_8UC3, greenlow);
-    greenUpper = new cv.Mat(768, 1024, cv.CV_8UC3, greenhigh);
+    yellowLower = new cv.Mat(768, 1024, cv.CV_8UC3, low);
+    yellowUpper = new cv.Mat(768, 1024, cv.CV_8UC3, high);
 
     // cv.cvtColor(yellowLower, yellowLower, cv.COLOR_HSV2RGB);
     // cv.cvtColor(yellowUpper, yellowUpper, cv.COLOR_HSV2RGB);
@@ -127,81 +174,65 @@ document.getElementById("btn2").addEventListener("click", () => {
 	displayCanvasLoop();
 });
 
+document.getElementById("calibrate-btn").addEventListener("click", () => {
+    appState.calibrateDir();
+});
+
+document.getElementById("wo-fisheye").addEventListener("click", (event) => {
+    const pos = getMousePos(event.target, event);
+    const commands = appState.pathService().calculatePath(appState.roboPos(), appState.roboDir(), appState.roboDirDefault(), pos);
+    console.debug({ msg: "sending commands", commands });
+    for (const cmd of commands) {
+        appState.ws().send(cmd.toString());
+    }
+});
+
 // cv.Size(width, height) für DIM
 
 const finalCanvas = document.querySelector("#wo-fisheye");
 /** @type {CanvasRenderingContext2D} */
 const finalCanvasCtx = finalCanvas.getContext("2d");
 
-const pathService = new PathService({
-	gridSize: {
-		width: 1024,
-		height: 768
-	},
-	ntiles: {
-		x: 30,
-		y: 25,
-	}
-});
-
-let redPos;
-let greenPos;
-
 function findRobo(original) {
     // yellow hsv = 30 255 255
     cv.cvtColor(original, roboHelper, cv.COLOR_RGB2HSV);
 
-    cv.inRange(roboHelper, greenLower, greenUpper, roboHelperGreen);
-    cv.inRange(roboHelper, redLower, redUpper, roboHelperRed);
+    cv.inRange(roboHelper, yellowLower, yellowUpper, yellowMask);
 
 	// OPENING IMAGE
 	const M = cv.Mat.ones(2, 2, cv.CV_8U);
 	const anchor = new cv.Point(-1, -1);
-	cv.morphologyEx(roboHelperRed, roboHelperRed, cv.MORPH_OPEN, M, anchor, 4, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
-	cv.morphologyEx(roboHelperGreen, roboHelperGreen, cv.MORPH_OPEN, M, anchor, 4, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
+	cv.morphologyEx(yellowMask, yellowMask, cv.MORPH_OPEN, M, anchor, 4, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
 
-    const foundRedPositions = [];
-    const foundGreenPositions = [];
+    // cv.imshow("gray", yellowMask);
 
 	const contours = new cv.MatVector();
 	const hierarchy = new cv.Mat();
-	cv.findContours(roboHelperRed, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
-    if (contours.size() > 0) {
-        for (let i = 0; i < contours.size(); i++)
-            foundRedPositions.push(cv.minAreaRect(contours.get(i)).center);
-    }
-	cv.findContours(roboHelperGreen, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
-    if (contours.size() > 0) {
-        for (let i = 0; i < contours.size(); i++)
-            foundGreenPositions.push(cv.minAreaRect(contours.get(i)).center);
+    let yellowPosition = {x: 0, y: 0};
+
+	cv.findContours(yellowMask, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
+    if (contours.size() === 0) {
+        console.debug("found no contours");
+        return;
     }
 
-    if (foundRedPositions.length === 0 || foundGreenPositions.length === 0) return;
-
-    let minDiff = Infinity;
-    for (const r of foundRedPositions) {
-        for (const g of foundGreenPositions) {
-            const dist = vec2len(vec2dir(r, g));
-            const diff = Math.abs(dist - 50);
-            if (diff < minDiff) {
-                minDiff = diff;
-                redPos = r;
-                greenPos = g;
-            }
+    finalCanvasCtx.strokeStyle = "#00ff00";
+    let maxSize = 0;
+    for (let i = 0; i < contours.size(); i++) {
+        const rect = cv.minAreaRect(contours.get(i));
+        const { width, height } = rect.size;
+        const size = width*height;
+        if (size > maxSize) {
+            yellowPosition = rect.center;
+            maxSize = size;
         }
     }
 
-    const r2g = vec2dir(redPos, greenPos);
-    vec2scale(r2g, 0.5);
-    const center = vec2add(redPos, r2g);
-    const dir = { x: r2g.y, y: -r2g.x };
-
-    appState.setRoboPosAndDir(center, dir);
+    // TODO dir
+    appState.setRoboPos(yellowPosition);
 
     finalCanvasCtx.fillStyle = "#00ff00";
-
-    const dirLen = vec2len(dir);
-    const angle = dir.y > 0 ? Math.acos(dir.x / dirLen) : 2*Math.PI - Math.acos(dir.x / dirLen); 
+    finalCanvasCtx.fillRect(yellowPosition.x, yellowPosition.y, 10, 10);
 
     contours.delete();
     hierarchy.delete();
@@ -222,7 +253,7 @@ function obsticleDetection() {
 	const anchor = new cv.Point(-1, -1);
 	cv.morphologyEx(gray, gray, cv.MORPH_OPEN, M, anchor, 4, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
 
-	cv.threshold(gray, gray, 20, 255, cv.THRESH_BINARY);
+	cv.threshold(gray, gray, 40, 255, cv.THRESH_BINARY);
 	// cv.imshow("diff", gray);
 
 	const contours = new cv.MatVector();
@@ -231,13 +262,13 @@ function obsticleDetection() {
 
 
 	finalCanvasCtx.save();
-	pathService.resetTiles();
+	appState.pathService().resetTiles();
 	for (let i = 0; i < contours.size(); i++) {
 		const rect = cv.minAreaRect(contours.get(i));
 		const verts = cv.RotatedRect.points(rect)
 			.map(v => {
 				const dir = vec2dir(rect.center, v);
-				vec2scale(dir, 1.3);
+				vec2scale(dir, 1.6);
 				return { x: rect.center.x + dir.x, y: rect.center.y + dir.y };
 			});
 		finalCanvasCtx.beginPath();
@@ -250,11 +281,11 @@ function obsticleDetection() {
 
 			const dir = vec2dir(curr, next);
 
-			for (let d = 0.1; d < 1.0; d += 0.1) {
+			for (let d = 0.05; d < 1.0; d += 0.05) {
 				const x = curr.x + (dir.x * d);
 				const y = curr.y + (dir.y * d);
 
-	 			pathService.markOccupiedForPixel(x, y);
+	 			appState.pathService().markOccupiedForPixel(x, y);
 			}
 
 			finalCanvasCtx.lineTo(curr.x, curr.y);
@@ -290,7 +321,8 @@ function displayCanvasLoop() {
         obsticleDetection();
     }
 
-	pathService.drawToCanvas(finalCanvasCtx);
+    // appState.pathService().calculatePath(appState.roboPos(), appState.roboDir(), appState.roboDirDefault(), null);
+	appState.pathService().drawToCanvas(finalCanvasCtx);
 
 	mat.delete();
 	setTimeout(() => {

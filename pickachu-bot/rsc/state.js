@@ -1,31 +1,16 @@
-const CALIBRATION_TIME_LIMIT = 5 * 1000;
+// @ts-check
 
-class CalibrationContext {
-    constructor() {
-        this.isCalibrating = false;
-    }
-
-    startCalibrating(pos) {
-        this.startPos = pos;
-        this.isCalibrating = true;
-        this.startTime = performance.now();
-    }
-
-    isTimeUp() {
-        const now = performance.now();
-        const isDone = (now - this.startTime) >= CALIBRATION_TIME_LIMIT;
-        if (isDone) this.isCalibrating = false;
-        return isDone;
-    }
-}
+import { PathService } from "./paths.js"
 
 export class AppState {
     /**
      * @param {HTMLInputElement | null} streamUrlElement
      * @param {HTMLCanvasElement | null} streamCanvas
      * @param {number} calcEveryNFrames
+     * @param {PathService} pathService
+     * @param {WebSocket} ws
      */
-    constructor(streamUrlElement, streamCanvas, calcEveryNFrames) {
+    constructor(streamUrlElement, streamCanvas, calcEveryNFrames, pathService, ws) {
         if (!streamUrlElement || !streamCanvas)
             throw new Error("parameters cannot be null");
         /** @private */
@@ -39,13 +24,21 @@ export class AppState {
         /** @private */
         this._roboPos = { x: 0, y: 0 };
         /** @private */
-        this._roboDir = { x: 0, y: 0 };
+        this._roboDir = 0;
         /** @private */
-        this._calibrationCtx = new CalibrationContext();
+        this._pathService = pathService;
+        /** @private */
+        this._roboDirDefault = 0;
+        /** @private */
+        this._ws = ws;
     }
 
-    calibrationCtx() {
-        return this._calibrationCtx;
+    ws() {
+        return this._ws;
+    }
+
+    pathService() {
+        return this._pathService;
     }
 
     /**
@@ -77,11 +70,42 @@ export class AppState {
 
     /**
      * @param { { x: number, y: number } } pos
-     * @param { { x: number, y: number } } dir
      */
-    setRoboPosAndDir(pos, dir) {
+    setRoboPos(pos) {
         this._roboPos = pos;
+    }
+
+    /**
+     * @param {number} dir
+     */
+    setRoboDir(dir) {
         this._roboDir = dir;
+    }
+
+    calibrateDir() {
+        this._roboDirDefault = this._roboDir;
+        console.debug({ msg: "calibrated rot", dir: this._roboDirDefault });
+    }
+
+    /**
+     * @returns { { x: number, y: number } }
+     */
+    roboPos() {
+        return JSON.parse(JSON.stringify(this._roboPos));
+    }
+
+    /**
+     * @returns {number}
+     */
+    roboDir() {
+        return this._roboDir;
+    }
+
+    /**
+     * @returns {number}
+     */
+    roboDirDefault() {
+        return this._roboDirDefault;
     }
 }
 

@@ -9,7 +9,7 @@ import lejos.hardware.Sound;
 public class SoundUnit {
 	
 	private volatile boolean running = true;
-	private Worker worker;
+	private Worker eventGenerator;
 	private static final int MIN_EVENT_DELAY = 1000;
 	private static final int MAX_EVENT_DELAY = 41000;
 	
@@ -18,9 +18,8 @@ public class SoundUnit {
 	public SoundUnit() {
 		System.out.println("Creating SoundUnit");
 		pickachuSounds = Arrays.asList(Sounds.Pika1, Sounds.Pika2, Sounds.Pika3, Sounds.Pika4, Sounds.Pika5);
-		worker  = new Worker();
-		worker.start();
-		//Sound.playSample(new File(DataProvider.getFileSystem().getPath("opening_2.wav").toString()));
+		eventGenerator  = new Worker();
+		eventGenerator.start();
 	}
 	
 	public void stop() {
@@ -28,7 +27,7 @@ public class SoundUnit {
 	}
 	
 	public void playSound(Sounds sound) {
-		Sound.playSample(sound.file);
+		Sound.playSample(new File(sound.filename), Sound.VOL_MAX);
 	}
 	
 	
@@ -36,19 +35,19 @@ public class SoundUnit {
 	 * Organizes Sound files
 	 */
 	public enum Sounds{
-		Pika1(new File("pikachu_sound_1.wav")),
-		Pika2(new File("pikachu_sound_2.wav")),
-		Pika3(new File("pikachu_sound_3.wav")),
-		Pika4(new File("pikachu_sound_4.wav")),
-		Pika5(new File("pikachu_sound_5.wav")),
-		BattleBegin(new File("battle.wav")),
-		BattleWin(new File("battle_win.wav"))
-
+		Pika1("pikachu_sound_1.wav"),
+		Pika2("pikachu_sound_2.wav"),
+		Pika3("pikachu_sound_3.wav"),
+		Pika4("pikachu_sound_4.wav"),
+		Pika5("pikachu_sound_5.wav"),
+		BattleBegin("battle.wav"),
+		BattleWin("battle_win.wav")
 		;
-		final File file;
 		
-		Sounds(File file) {
-			this.file = file;
+		final String filename;
+		
+		Sounds(String filename) {
+			this.filename = filename;
 		}
 	}
 	

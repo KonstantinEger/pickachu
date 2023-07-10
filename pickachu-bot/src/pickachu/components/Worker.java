@@ -20,7 +20,7 @@ public class Worker {
 	 * lets say you want to operate two motors - then you need two coworkers.
 	 */
 	public Worker(int coWorkers) {
-		// needs one extra thread for self
+		// Needs one extra thread for self
 		this.coWorkers = Executors.newFixedThreadPool(coWorkers+1);
 	}
 	
@@ -61,7 +61,7 @@ public class Worker {
 	private Future<?> multiActionHelper(final MultiAction action) {
 		final List<Future<?>> futures = new ArrayList<>();
 		
-		// submit each action to a CoWorker and start it
+		// Submit each action to a CoWorker and start it
 		for (final SimpleAction simpleAction : action.getActions()) {
 			Future<?> future = simpleActionHelper(simpleAction);
 			futures.add(future);

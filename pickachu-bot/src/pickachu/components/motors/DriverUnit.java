@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Future;
 
+import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.hardware.motor.EV3MediumRegulatedMotor;
 import lejos.hardware.port.MotorPort;
 import lejos.robotics.RegulatedMotor;
@@ -18,12 +19,12 @@ public class DriverUnit implements Disposable {
 	private final RegulatedMotor leftMotor;
 	private final RegulatedMotor rightMotor;
 	private final Worker driver;
-	private static final int SPEED = 100;
+	private static final int SPEED = 100; //100;
 	
 	
 	public DriverUnit() {
-		leftMotor = new EV3MediumRegulatedMotor(MotorPort.A);
-		rightMotor = new EV3MediumRegulatedMotor(MotorPort.B);
+		leftMotor = new EV3LargeRegulatedMotor(MotorPort.B);
+		rightMotor = new EV3LargeRegulatedMotor(MotorPort.A);
 		leftMotor.setSpeed(SPEED);
 		rightMotor.setSpeed(SPEED);
 		driver = new Worker(2);
@@ -43,13 +44,13 @@ public class DriverUnit implements Disposable {
 					new SimpleAction() {
 						@Override
 						public void execute() {
-							rightMotor.rotate(degrees);
+							rightMotor.rotate(-degrees);
 						}
 					},
 					new SimpleAction() {
 						@Override
 						public void execute() {
-							leftMotor.rotate(-degrees);
+							leftMotor.rotate(+degrees);
 						}
 					}
 				);

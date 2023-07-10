@@ -9,12 +9,13 @@ import pickachu.components.SimpleAction;
 
 public class PickupUnit implements Disposable{
 	
-	private static final int ROTATION = 135;
+	private static final int ROTATION = 1485;
 	private final RegulatedMotor motor;
 	private final Worker picker;
 	
 	public PickupUnit() {
 		motor = new EV3MediumRegulatedMotor(MotorPort.C);
+		motor.setSpeed(500);
 		picker = new Worker(0);
 	}
 	

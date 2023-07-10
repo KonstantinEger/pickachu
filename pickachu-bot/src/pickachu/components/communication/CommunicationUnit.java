@@ -40,17 +40,11 @@ public class CommunicationUnit extends WebSocketServer implements Disposable{
 	
 
 	@Override
-	public void onClose(WebSocket arg0, int arg1, String arg2, boolean arg3) {
-		// TODO Auto-generated method stub
-		
-	}
+	public void onClose(WebSocket arg0, int arg1, String arg2, boolean arg3) {	}
 
 
 	@Override
-	public void onError(WebSocket arg0, Exception arg1) {
-		// TODO Auto-generated method stub
-		
-	}
+	public void onError(WebSocket arg0, Exception arg1) {	}
 
 
 	@Override
@@ -64,17 +58,11 @@ public class CommunicationUnit extends WebSocketServer implements Disposable{
 
 
 	@Override
-	public void onOpen(WebSocket arg0, ClientHandshake arg1) {
-		// TODO Auto-generated method stub
-		
-	}
+	public void onOpen(WebSocket arg0, ClientHandshake arg1) {	}
 
 
 	@Override
-	public void onStart() {
-		// TODO Auto-generated method stub
-		
-	}
+	public void onStart() {	}
 	
 	@Override
 	public void dispose() {

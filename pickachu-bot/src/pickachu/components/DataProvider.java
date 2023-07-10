@@ -12,6 +12,11 @@ import pickachu.components.motors.PickupUnit;
 import pickachu.components.orientation.OrientationUnit;
 import pickachu.components.sound.SoundUnit;
 
+/**
+ * The DataProvider Singleton keeps a reference to the robots state containing system components and
+ * makes them available for the main class to call. The components themselves have no knowledge about each other.
+ * Their interconnection is done by the user of the DataProvider.
+ */
 public class DataProvider {
 	
 	private static FileSystem fileSystem;

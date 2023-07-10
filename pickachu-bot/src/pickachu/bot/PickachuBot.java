@@ -14,7 +14,7 @@ import pickachu.webserver.Webserver;
 public class PickachuBot {
 	public static void main(String[] args) throws IOException {
 	
-		// Inject message handling rules into the websocket.
+		// Inject Message-handling rules into the Websocket.
 		DataProvider.communicationUnit().setHandler(new MessageHandler() {
 			
 			@Override
@@ -44,8 +44,7 @@ public class PickachuBot {
 			}
 		});
 		
-		
-		// Push gyro sensor updates to client whenever it updates.
+		// Push Gyro Sensor Updates to Client whenever it updates.
 		DataProvider.orientationUnit().registerObservers(new Observer<Float>() {
 			@Override
 			public void onValueChange(Float value) {
@@ -53,10 +52,13 @@ public class PickachuBot {
 			}
 		});
 		
+		// Host the Webserver
 		Webserver.getInstance().host();
 		
+		// Start the SoundUnit
 		DataProvider.soundUnit();
 		
+		// Block Main Thread until Enter Button is pressed
 		shutdownOnEnterButtonClicked();
 	}
 	
@@ -77,9 +79,7 @@ public class PickachuBot {
 	}
 	
 	public static void shutdownOnEnterButtonClicked(){
-		System.out.print("Waiting for shutdown");
 		while (Button.waitForAnyPress() == Button.ID_ENTER) {
-			System.out.print("Enter button registered");
 			try {
 				Webserver.getInstance().dispose();
 				DataProvider.driverUnit().dispose();
@@ -88,7 +88,7 @@ public class PickachuBot {
 				DataProvider.communicationUnit().dispose();
 				System.exit(0);
 			} catch (IOException e) {
-				System.out.print("In Error state");
+				System.out.print("Failed to properly shut down the robot.");
 				e.printStackTrace();
 			}
 		}

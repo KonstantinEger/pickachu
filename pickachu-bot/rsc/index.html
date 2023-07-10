@@ -2,25 +2,71 @@
 	<head>
 		<title>rtsp example</title>
 		<script src="https://cdn.jsdelivr.net/npm/rtsp-relay@1.7.0/browser/index.js"></script>
-		<script src="https://docs.opencv.org/4.x/opencv.js"></script>
+		<script async onload="onOpenCvReady()" src="https://docs.opencv.org/4.x/opencv.js"></script>
+        <script>
+            window.scrollTo(0, 0);
+            function onOpenCvReady() {
+                document.querySelector("#btn2").disabled = false;
+            }
+        </script>
+        <style>
+            body {
+                margin: 0;
+                background-color: rgb(51 51 51);
+            }
+
+            .menu-overlay {
+                width: 100vw;
+                height: 100vh;
+                background-color: rgb(51 51 51);
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                gap: 20px;
+            }
+
+            #loading {
+                opacity: 0;
+            }
+
+            .controls {
+                display: none;
+                position: sticky;
+                bottom: 20px;
+            }
+
+            #wo-fisheye {
+                width: 100vw;
+            }
+        </style>
 	</head>
 	<body>
-		<input type="text" placeholder="ws://path:to/your/stream" value="ws://localhost:2000/api/stream" id="stream-input">
-		<input type="file" multiple id="image-input">
-		<button id="btn1">start stream</button>
-		<button id="btn2">start opencv</button>
-		<br>
-		<canvas id="original" style="" width="1024" height="768"></canvas>
-		<br>
+        <div id="menu" class="menu-overlay">
+            <input type="text" placeholder="ws://path:to/your/stream" value="ws://localhost:2000/api/stream" id="stream-input">
+            <input type="file" multiple id="image-input">
+            <button id="btn2" disabled>start</button>
+            <p id="loading">Loading</p>
+        </div>
+        <!--
 		<canvas id="gray"></canvas>
 		<br>
 		<canvas id="diff"></canvas>
 		<br>
+        -->
 		<canvas id="wo-fisheye"></canvas>
+        <!--
 		<canvas id="yellow-lower"></canvas>
 		<canvas id="yellow-upper"></canvas>
-		<button id="calibrate-btn">calibrate rotation</button>
-		<button id="calc-btn">calc</button>
+        -->
+        <div class="controls" id="controls-container">
+            <button id="calibrate-btn">calibrate rotation</button>
+            <button id="stop-btn">stop</button>
+            <button id="pickup">pickup</button>
+            <button id="drop">drop</button>
+            <input type="range" min="0" max="900" id="discardSize" value="0">
+        </div>
+		<canvas id="original" style="opacity: 0" width="1024" height="768"></canvas>
 
 		<script src="./client.js" type="module"></script>
 	</body>

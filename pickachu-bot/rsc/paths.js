@@ -1,8 +1,11 @@
 // @ts-check
 
+import { Log } from "./log.js";
+
 class Tile {
 	constructor({ occupied, x, y } = { occupied: false, x: 0, y: 0 }) {
 		this.occupied = occupied;
+        this.committedOccupied = occupied;
 		this.x = x;
 		this.y = y;
         this.visited = false;
@@ -27,7 +30,13 @@ export class Command {
 
 
 export class PathService {
-	constructor({ gridSize, ntiles }) {
+    /**
+     * @param { any } a
+     * @param { Log } log 
+     */
+	constructor({ gridSize, ntiles }, log) {
+        /** @private */
+        this._log = log;
 		this.gridSize = gridSize;
 		this.tileSize = {
 			width: Math.floor(gridSize.width / ntiles.x),
@@ -55,6 +64,24 @@ export class PathService {
 		}
 	}
 
+    bakeOccupied(roboPos) {
+        const [rTileX, rTileY] = this.imageToTileCoords(roboPos.x, roboPos.y);
+        for (let i = rTileX-1; i <= rTileX+1; i++) {
+            for (let j = rTileY-1; j <= rTileY+1; j++) {
+                const idx = this.tileCoordsToIndex(i, j);
+                if (idx < 0 || this.tiles.length <= idx) {
+                    continue;
+                }
+                const tile = this.tiles[idx];
+                tile.committedOccupied = false;
+                tile.occupied = false;
+            }
+        }
+        for (const tile of this.tiles) {
+            tile.committedOccupied = tile.occupied;
+        }
+    }
+
     /**
      * @param {{ x: number, y: number }} roboPos
      * @param {number} roboDir
@@ -63,18 +90,20 @@ export class PathService {
      * @returns {Command[]}
      */
     calculatePath(roboPos, roboDir, roboDirDefault, targetPos) {
+        this._log.info("calculating path", { roboPos, roboDir, roboDirDefault, targetPos });
         // Mark occupied fields around the robo to not be occupied
         const [rTileX, rTileY] = this.imageToTileCoords(roboPos.x, roboPos.y);
         const rIdx = this.tileCoordsToIndex(rTileX, rTileY);
-        for (let i = rTileX-1; i <= rTileX+1; i++) {
-            for (let j = rTileY-1; j <= rTileY+1; j++) {
-                const idx = this.tileCoordsToIndex(i, j);
-                if (idx < 0 || this.tiles.length <= idx) {
-                    continue;
-                }
-                this.tiles[idx].occupied = false;
-            }
-        }
+        // for (let i = rTileX-2; i <= rTileX+2; i++) {
+        //     for (let j = rTileY-2; j <= rTileY+2; j++) {
+        //         const idx = this.tileCoordsToIndex(i, j);
+        //         if (idx < 0 || this.tiles.length <= idx) {
+        //             continue;
+        //         }
+        //         const tile = this.tiles[idx];
+        //         tile.occupied = false;
+        //     }
+        // }
 
         // BFS through the grid
         const [tTileX, tTileY] = this.imageToTileCoords(targetPos.x, targetPos.y);
@@ -97,7 +126,7 @@ export class PathService {
                 const neighborIdx = this.tileCoordsToIndex(i, j);
                 if (neighborIdx < 0
                     || this.tiles.length <= neighborIdx
-                    || this.tiles[neighborIdx].occupied
+                    || this.tiles[neighborIdx].committedOccupied
                     || this.tiles[neighborIdx].visited
                     || neighborIdx === currIdx
                 ) {
@@ -113,33 +142,43 @@ export class PathService {
 
         // Build path of indices
         const path = [];
-        let currIdx = this.tileCoordsToIndex(tTileX, tTileY);
+        const targetIndex = this.tileCoordsToIndex(tTileX, tTileY);
+        let currIdx = this.tiles[targetIndex].reachableThrough;
         while (currIdx !== rIdx) {
+            if (currIdx < 0) {
+                this._log.warn("could not reach target", {});
+                return [];
+            }
             path.unshift(currIdx);
             currIdx = this.tiles[currIdx].reachableThrough;
         }
-        console.log(path);
-        console.log(path.map(this.indexToCoords.bind(this)));
+        this._log.debug("indices of path", { path });
+        this._log.debug("coords of path", { path: path.map(this.indexToCoords.bind(this)) });
 
         /** @type {Command[]} */
         const commands = [];
         let normDir = roboDirDefault - roboDir;
+        this._log.debug("rotations", { normDir, roboDirDefault, roboDir });
 
         // debugger;
-        // const movementLength = 187; // für 30x25
-        const movementLength = 130; // für 40x35
+        const movementLength = 187; // für 30x25
+        // const movementLength = 130; // für 40x35
+        const rotationMultiplier = 1.8963;
         for (let i = 0; i < path.length-1; i++) {
             const currIdx = path[i];
             const nextIdx = path[i+1];
 
             const rotationFrom0 = getDir(currIdx, nextIdx, this.nTilesX);
-            const actualRotation = -normDir + rotationFrom0;
-            if (actualRotation === 0 && commands.length > 0) {
-                commands[commands.length-1].amount += movementLength;
-            } else {
-                commands.push(new Command("Right", 2.6*actualRotation));
-                commands.push(new Command("Forward", movementLength));
+            let actualRotation = -normDir + rotationFrom0;
+
+            if (actualRotation > 200) {
+                actualRotation = actualRotation - 360;
+            } else if (actualRotation < -200) {
+                actualRotation = actualRotation + 360;
             }
+
+            commands.push(new Command("Right", rotationMultiplier*actualRotation));
+            commands.push(new Command("Forward", movementLength));
             normDir += actualRotation;
         }
 
@@ -251,7 +290,6 @@ export class PathService {
  * @param {number} rIdx
  * @param {number} tIdx
  * @param {number} w
- * @returns {number} degrees
  */
 function getDir(rIdx, tIdx, w) {
     // r-w-1 | r-w | r-w+1
@@ -260,13 +298,12 @@ function getDir(rIdx, tIdx, w) {
     // ------|-----|------
     // r+w-1 | r+w | r+w+1
     const n = tIdx - rIdx;
-    if (n === -w-1) return -135;
-    else if (n === -w) return -90;
-    else if (n === -w+1) return -45;
+    if (n === -w) return -90;
     else if (n === -1) return -180;
     else if (n === 0) return 0;
     else if (n === 1) return 0;
-    else if (n === w-1) return 135;
     else if (n === w) return 90;
-    else return 45;
+    else {
+        throw new Error("invalid dir");
+    }
 }

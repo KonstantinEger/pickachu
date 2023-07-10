@@ -1,23 +1,35 @@
 import { PathService } from "./paths.js";
 import { AppState } from "./state.js";
+import { Log, LEVEL_INFO } from "./log.js";
+
+const LOGLEVEL = LEVEL_INFO;
+const cvlog = new Log("OpenCV", LOGLEVEL);
 
 const appState = new AppState(
     document.querySelector("#stream-input"),
     document.querySelector("#original"),
     // calculate every n frames:
     1,
-    new PathService({
-        gridSize: {
-            width: 1024,
-            height: 768
+    new PathService(
+        {
+            gridSize: {
+                width: 1024,
+                height: 768
+            },
+            ntiles: {
+                x: 30,
+                y: 25,
+            },
         },
-        ntiles: {
-            x: 40,
-            y: 35,
-        }
-    }),
+        new Log("PathService", LOGLEVEL),
+    ),
     startWebSocket(),
+    new Log("AppState", LOGLEVEL),
 );
+
+document.querySelector("#discardSize").addEventListener("input", (event) => {
+    appState.discardSize = parseFloat(event.target.value);
+});
 
 /**
  * @param {number} alpha
@@ -68,8 +80,8 @@ function vec2len(vec) {
 }
 
 // start stream btn
-document.getElementById("btn1").addEventListener("click", () => {
-    // startWebSocket();
+document.getElementById("btn2").addEventListener("click", () => {
+    document.querySelector("#loading").style.opacity = "100%";
 
 	if (!appState.shouldStreamFromUrl()) {
 		const imageInput = document.querySelector("#image-input");
@@ -87,31 +99,58 @@ document.getElementById("btn1").addEventListener("click", () => {
 			disableGl: true
 		});
 	}
+    setTimeout(() => {
+        document.querySelector("#menu").style.display = "none";
+        document.querySelector("#controls-container").style.display = "block";
+        startOpenCv();
+    }, 5000);
+});
+
+document.querySelector("#stop-btn").addEventListener("click", () => {
+    cvlog.info("stopping robo");
+    appState.setOnRoute(false);
+});
+
+document.querySelector("#pickup").addEventListener("click", () => {
+    cvlog.info("letting robo pick up");
+    appState.ws().send("PickUp");
+});
+
+document.querySelector("#drop").addEventListener("click", () => {
+    cvlog.info("letting robo drop");
+    appState.ws().send("Drop");
 });
 
 function startWebSocket() {
     const ws = new WebSocket(`ws://141.46.137.146:8081/`);
 
     ws.onerror = (event) => {
-        console.error({ msg: "ws error occurred", event });
+        cvlog.error("ws error occurred", { event });
+        window.alert("WS Error occurred. Check logs");
     };
 
     ws.onmessage = (event) => {
-        console.debug({ msg: "got ws msg", event });
+        cvlog.debug("got ws msg", { event });
         const [type, ...params] = event.data.split(":");
         if (type === "Gyro") {
             const degs = parseInt(params[0]);
-            console.debug({ msg: "setting robo dir", degs });
+            cvlog.debug("setting robo dir", { degs });
             appState.setRoboDir(degs);
+        } else if (type === "Ack" && params[0] === "Forward" && appState.isOnRoute()) {
+            const commands = appState.pathService().calculatePath(appState.roboPos(), appState.roboDir(), appState.roboDirDefault(), appState.targetPos());
+            appState.setOnRoute(commands.length > 0);
+            for (const cmd of commands.slice(0, 2)) {
+                appState.ws().send(cmd.toString());
+            }
         }
     };
 
     ws.onopen = (event) => {
-        console.info({ msg: "connected to ws", event });
+        cvlog.info("connected to ws", { event });
     };
 
     ws.onclose = (event) => {
-        console.info({ msg: "ws closed", event });
+        cvlog.info("ws closed", { event });
     };
     return ws;
 }
@@ -142,7 +181,7 @@ function  getMousePos(canvas, evt) {
 }
 
 // start opencv
-document.getElementById("btn2").addEventListener("click", () => {
+function startOpenCv() {
 	DIM = new cv.Size(1024, 768);
 	K = cv.matFromArray(3, 3, cv.CV_32F, [26864.957112648033, 0.0, 462.391611030626, 0.0, 26100.130628757528, 355.3302327869351, 0.0, 0.0, 1.0]);
 	D = cv.matFromArray(1, 4, cv.CV_32F, [-267.22399997112325, 21930.119543790075, 3445785.4755827268, 772191813.4918289]);
@@ -172,17 +211,20 @@ document.getElementById("btn2").addEventListener("click", () => {
     // cv.imshow("yellow-lower", yellowLower);
     // cv.imshow("yellow-upper", yellowUpper);
 	displayCanvasLoop();
-});
+}
 
 document.getElementById("calibrate-btn").addEventListener("click", () => {
     appState.calibrateDir();
 });
 
-document.getElementById("wo-fisheye").addEventListener("click", (event) => {
+document.querySelector("#wo-fisheye").addEventListener("click", (event) => {
+    appState.pathService().bakeOccupied(appState.roboPos);
     const pos = getMousePos(event.target, event);
+    appState.setTargetPos(pos.x, pos.y);
     const commands = appState.pathService().calculatePath(appState.roboPos(), appState.roboDir(), appState.roboDirDefault(), pos);
-    console.debug({ msg: "sending commands", commands });
-    for (const cmd of commands) {
+    cvlog.debug("commands after click", { commands });
+    appState.setOnRoute(commands.length > 0);
+    for (const cmd of commands.slice(0, 2)) {
         appState.ws().send(cmd.toString());
     }
 });
@@ -212,7 +254,7 @@ function findRobo(original) {
 
 	cv.findContours(yellowMask, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
     if (contours.size() === 0) {
-        console.debug("found no contours");
+        cvlog.debug("found no contours");
         return;
     }
 
@@ -265,10 +307,16 @@ function obsticleDetection() {
 	appState.pathService().resetTiles();
 	for (let i = 0; i < contours.size(); i++) {
 		const rect = cv.minAreaRect(contours.get(i));
+        const rectArea = rect.size.width*rect.size.height;
+
+        if (rectArea < appState.discardSize) {
+            continue;
+        }
+
 		const verts = cv.RotatedRect.points(rect)
 			.map(v => {
 				const dir = vec2dir(rect.center, v);
-				vec2scale(dir, 1.6);
+				vec2scale(dir, 1.8);
 				return { x: rect.center.x + dir.x, y: rect.center.y + dir.y };
 			});
 		finalCanvasCtx.beginPath();

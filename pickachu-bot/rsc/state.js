@@ -1,5 +1,6 @@
 // @ts-check
 
+import { Log } from "./log.js"
 import { PathService } from "./paths.js"
 
 export class AppState {
@@ -9,8 +10,9 @@ export class AppState {
      * @param {number} calcEveryNFrames
      * @param {PathService} pathService
      * @param {WebSocket} ws
+     * @param {Log} log
      */
-    constructor(streamUrlElement, streamCanvas, calcEveryNFrames, pathService, ws) {
+    constructor(streamUrlElement, streamCanvas, calcEveryNFrames, pathService, ws, log) {
         if (!streamUrlElement || !streamCanvas)
             throw new Error("parameters cannot be null");
         /** @private */
@@ -31,6 +33,22 @@ export class AppState {
         this._roboDirDefault = 0;
         /** @private */
         this._ws = ws;
+        /** @private */
+        this._targetPos = { x: 0, y: 0 };
+        /** @private */
+        this._isOnRoute = false;
+        /** @private */
+        this._log = log;
+        this.discardSize = 0;
+    }
+
+    isOnRoute() {
+        return this._isOnRoute;
+    }
+
+    /** @param {boolean} value */
+    setOnRoute(value) {
+        this._isOnRoute = value;
     }
 
     ws() {
@@ -39,6 +57,21 @@ export class AppState {
 
     pathService() {
         return this._pathService;
+    }
+
+    /**
+     * @param {number} x
+     * @param {number} y
+     */
+    setTargetPos(x, y) {
+        this._targetPos = { x, y };
+    }
+
+    /**
+     * @returns {{ x: number, y: number }}
+     */
+    targetPos() {
+        return this._targetPos;
     }
 
     /**

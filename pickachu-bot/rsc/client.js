@@ -17,8 +17,8 @@ const appState = new AppState(
                 height: 768
             },
             ntiles: {
-                x: 40,
-                y: 35,
+                x: 30,
+                y: 25,
             },
         },
         new Log("PathService", LOGLEVEL),
@@ -26,6 +26,10 @@ const appState = new AppState(
     startWebSocket(),
     new Log("AppState", LOGLEVEL),
 );
+
+document.querySelector("#discardSize").addEventListener("input", (event) => {
+    appState.discardSize = parseFloat(event.target.value);
+});
 
 /**
  * @param {number} alpha
@@ -107,11 +111,22 @@ document.querySelector("#stop-btn").addEventListener("click", () => {
     appState.setOnRoute(false);
 });
 
+document.querySelector("#pickup").addEventListener("click", () => {
+    cvlog.info("letting robo pick up");
+    appState.ws().send("PickUp");
+});
+
+document.querySelector("#drop").addEventListener("click", () => {
+    cvlog.info("letting robo drop");
+    appState.ws().send("Drop");
+});
+
 function startWebSocket() {
     const ws = new WebSocket(`ws://141.46.137.146:8081/`);
 
     ws.onerror = (event) => {
         cvlog.error("ws error occurred", { event });
+        window.alert("WS Error occurred. Check logs");
     };
 
     ws.onmessage = (event) => {
@@ -123,11 +138,9 @@ function startWebSocket() {
             appState.setRoboDir(degs);
         } else if (type === "Ack" && params[0] === "Forward" && appState.isOnRoute()) {
             const commands = appState.pathService().calculatePath(appState.roboPos(), appState.roboDir(), appState.roboDirDefault(), appState.targetPos());
-            if (commands.length < 2) {
-                appState.setOnRoute(false);
-            } else {
-                appState.ws().send(commands[0].toString());
-                appState.ws().send(commands[1].toString());
+            appState.setOnRoute(commands.length > 0);
+            for (const cmd of commands.slice(0, 2)) {
+                appState.ws().send(cmd.toString());
             }
         }
     };
@@ -204,15 +217,15 @@ document.getElementById("calibrate-btn").addEventListener("click", () => {
     appState.calibrateDir();
 });
 
-document.getElementById("wo-fisheye").addEventListener("click", (event) => {
+document.querySelector("#wo-fisheye").addEventListener("click", (event) => {
+    appState.pathService().bakeOccupied(appState.roboPos);
     const pos = getMousePos(event.target, event);
     appState.setTargetPos(pos.x, pos.y);
     const commands = appState.pathService().calculatePath(appState.roboPos(), appState.roboDir(), appState.roboDirDefault(), pos);
     cvlog.debug("commands after click", { commands });
-    if (commands.length > 0) {
-        appState.setOnRoute(true);
-        appState.ws().send(commands[0].toString());
-        appState.ws().send(commands[1].toString());
+    appState.setOnRoute(commands.length > 0);
+    for (const cmd of commands.slice(0, 2)) {
+        appState.ws().send(cmd.toString());
     }
 });
 
@@ -294,10 +307,16 @@ function obsticleDetection() {
 	appState.pathService().resetTiles();
 	for (let i = 0; i < contours.size(); i++) {
 		const rect = cv.minAreaRect(contours.get(i));
+        const rectArea = rect.size.width*rect.size.height;
+
+        if (rectArea < appState.discardSize) {
+            continue;
+        }
+
 		const verts = cv.RotatedRect.points(rect)
 			.map(v => {
 				const dir = vec2dir(rect.center, v);
-				vec2scale(dir, 1.6);
+				vec2scale(dir, 1.8);
 				return { x: rect.center.x + dir.x, y: rect.center.y + dir.y };
 			});
 		finalCanvasCtx.beginPath();

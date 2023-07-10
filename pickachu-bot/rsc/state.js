@@ -39,6 +39,7 @@ export class AppState {
         this._isOnRoute = false;
         /** @private */
         this._log = log;
+        this.discardSize = 0;
     }
 
     isOnRoute() {

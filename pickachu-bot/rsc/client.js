@@ -103,7 +103,7 @@ document.getElementById("btn2").addEventListener("click", () => {
         document.querySelector("#menu").style.display = "none";
         document.querySelector("#controls-container").style.display = "block";
         startOpenCv();
-    }, 5000);
+    }, 4000);
 });
 
 document.querySelector("#stop-btn").addEventListener("click", () => {

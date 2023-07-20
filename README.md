@@ -13,8 +13,7 @@ PICKachu's primary objective is to autonomously detect and navigate around obsta
 
 Check out our demo video on YouTube to see PICKachu in action:
 
-<!--
-[![PICKachu Demo Video](link-to-demo-thumbnail.png)](link-to-demo-video) -->
+[![PICKachu Demo Video](https://github.com/KonstantinEger/pickachu/assets/81491426/2feb9630-8053-495c-9933-89d890cd0567)]([link-to-demo-video](https://youtu.be/JIuG0PSL9tk))
 
 ## Setup Guide
 

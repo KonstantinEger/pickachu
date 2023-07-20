@@ -1,5 +1,7 @@
 package pickachu.components.motors;
 
+import java.util.concurrent.Future;
+
 import lejos.hardware.motor.EV3MediumRegulatedMotor;
 import lejos.hardware.port.MotorPort;
 import lejos.robotics.RegulatedMotor;
@@ -7,6 +9,10 @@ import pickachu.components.Worker;
 import pickachu.components.Disposable;
 import pickachu.components.SimpleAction;
 
+/**
+ * Provides an abstraction to access the underlyig hardware interface provided by lejos.
+ * This component controls two one motor and handles picking up / dropping objects.
+ */
 public class PickupUnit implements Disposable{
 	
 	private static final int ROTATION = 1485;
@@ -19,22 +25,26 @@ public class PickupUnit implements Disposable{
 		picker = new Worker(0);
 	}
 	
-	public void pickUp() {
-		picker.submit(new SimpleAction() {
+	public Future<?> pickUp() {
+		Future<?> task =  picker.submit(new SimpleAction() {
 			@Override
 			public void execute() {
 				motor.rotate(-ROTATION);
 			}
 		});
+		
+		return task;
 	}
 	
-	public void drop() {
-		picker.submit(new SimpleAction() {
+	public Future<?> drop() {
+		Future<?> task = picker.submit(new SimpleAction() {
 			@Override
 			public void execute() {
 				motor.rotate(ROTATION);
 			}
 		});
+		
+		return task;
 	}
 	
 	@Override

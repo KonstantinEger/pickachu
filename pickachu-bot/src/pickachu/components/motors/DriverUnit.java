@@ -14,6 +14,10 @@ import pickachu.components.Disposable;
 import pickachu.components.MultiAction;
 
 
+/**
+ * Provides an abstraction to access the underlyig hardware interface provided by lejos.
+ * This component controls two motors to make the robot able to move in space.
+ */
 public class DriverUnit implements Disposable {
 	
 	private final RegulatedMotor leftMotor;
@@ -30,11 +34,11 @@ public class DriverUnit implements Disposable {
 		driver = new Worker(2);
 	}
 
-	public void left(final int degrees) {
-		this.right(-degrees);
+	public Future<?> left(final int degrees) {
+		return this.right(-degrees);
 	}
 	
-	public void right(final int degrees) {
+	public Future<?> right(final int degrees) {
 		
 		Future<?> task = driver.submit(new MultiAction(){
 
@@ -58,10 +62,10 @@ public class DriverUnit implements Disposable {
 			
 		});
 		
-		Utils.waitForFuture(task);
+		return task;
 	}
 	
-	public void forward(final int degrees) {
+	public Future<?> forward(final int degrees) {
 		Future<?> task = driver.submit(new MultiAction(){
 
 			@Override
@@ -84,7 +88,7 @@ public class DriverUnit implements Disposable {
 			
 		});
 		
-		Utils.waitForFuture(task);
+		return task;
 	}
 	
 	@Override

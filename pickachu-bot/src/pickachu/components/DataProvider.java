@@ -11,6 +11,7 @@ import pickachu.components.motors.DriverUnit;
 import pickachu.components.motors.PickupUnit;
 import pickachu.components.orientation.OrientationUnit;
 import pickachu.components.sound.SoundUnit;
+import pickachu.webserver.Webserver;
 
 /**
  * The DataProvider Singleton keeps a reference to the robots state containing system components and
@@ -20,13 +21,21 @@ import pickachu.components.sound.SoundUnit;
 public class DataProvider {
 	
 	private static FileSystem fileSystem;
+	private static Webserver webserver;
 	private static CommunicationUnit communicationUnit;
 	private static OrientationUnit orientationUnit;
 	private static DriverUnit driverUnit;
 	private static PickupUnit pickupUnit;
 	private static SoundUnit soundUnit;
 	
-	public static synchronized CommunicationUnit communicationUnit() {
+	public static synchronized Webserver webserver() {
+		if (webserver == null) {
+			webserver = new Webserver();
+		}
+		return webserver;
+	}
+	
+	public static CommunicationUnit communicationUnit() {
 		if (communicationUnit == null) {
 			communicationUnit = new CommunicationUnit();
 			communicationUnit.start();

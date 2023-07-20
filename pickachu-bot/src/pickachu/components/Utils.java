@@ -1,4 +1,4 @@
-package pickachu.components.motors;
+package pickachu.components;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;

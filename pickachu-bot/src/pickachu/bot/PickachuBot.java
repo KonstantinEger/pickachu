@@ -1,6 +1,7 @@
 package pickachu.bot;
 
 import java.io.IOException;
+import java.util.concurrent.Future;
 
 import lejos.hardware.Button;
 import pickachu.components.DataProvider;
@@ -8,8 +9,8 @@ import pickachu.components.Observer;
 import pickachu.components.communication.Message;
 import pickachu.components.communication.MessageHandler;
 import pickachu.components.communication.OpCode;
+import pickachu.components.Utils;
 import pickachu.components.sound.SoundUnit.Sounds;
-import pickachu.webserver.Webserver;
 
 public class PickachuBot {
 	public static void main(String[] args) throws IOException {
@@ -19,24 +20,29 @@ public class PickachuBot {
 			
 			@Override
 			public Message handle(Message message) {
+				Future<?> awaitable;
+				
 				switch (message.opCode) {
 				case Forward:
-					DataProvider.driverUnit().forward(extractRotations(message));
-					return acknowledge(message);
+					awaitable = DataProvider.driverUnit().forward(extractRotations(message));
+					Utils.waitForFuture(awaitable);
+					return message.acknowledge();
 				case Left:
-					DataProvider.driverUnit().left(extractRotations(message));
-					return acknowledge(message);
+					awaitable = DataProvider.driverUnit().left(extractRotations(message));
+					Utils.waitForFuture(awaitable);
+					return message.acknowledge();
 				case Right:
-					DataProvider.driverUnit().right(extractRotations(message));
-					return acknowledge(message);
+					awaitable = DataProvider.driverUnit().right(extractRotations(message));
+					Utils.waitForFuture(awaitable);
+					return message.acknowledge();
 				case PickUp:
 					DataProvider.soundUnit().playSound(Sounds.BattleBegin);
-					DataProvider.pickupUnit().pickUp();
-					return acknowledge(message);
+					awaitable = DataProvider.pickupUnit().pickUp();
+					return message.acknowledge();
 				case Drop:
-					DataProvider.pickupUnit().drop();
+					awaitable = DataProvider.pickupUnit().drop();
 					DataProvider.soundUnit().playSound(Sounds.BattleWin);
-					return acknowledge(message);
+					return message.acknowledge();
 				case NoOp:
 				default:
 					return null;
@@ -53,7 +59,7 @@ public class PickachuBot {
 		});
 		
 		// Host the Webserver
-		Webserver.getInstance().host();
+		DataProvider.webserver().host();
 		
 		// Start the SoundUnit
 		DataProvider.soundUnit();
@@ -66,31 +72,14 @@ public class PickachuBot {
 		return Integer.parseInt(message.content[0]);
 	}
 	
-	/**
-	 * Builds an acknowledgement message for the input message
-	 */
-	public static Message acknowledge(Message message) {
-		 String[] responseContent = new String[message.content.length + 1];
-		 responseContent[0] = message.opCode.name();
-		 for (int index = 0; index < message.content.length; index++) {
-			 responseContent[index+1]= message.content[index];
-		 }
-		 return new Message(OpCode.Ack, responseContent);
-	}
-	
 	public static void shutdownOnEnterButtonClicked(){
 		while (Button.waitForAnyPress() == Button.ID_ENTER) {
-			try {
-				Webserver.getInstance().dispose();
-				DataProvider.driverUnit().dispose();
-				DataProvider.pickupUnit().dispose();
-				DataProvider.orientationUnit().dispose();
-				DataProvider.communicationUnit().dispose();
-				System.exit(0);
-			} catch (IOException e) {
-				System.out.print("Failed to properly shut down the robot.");
-				e.printStackTrace();
-			}
+			DataProvider.webserver().dispose();
+			DataProvider.driverUnit().dispose();
+			DataProvider.pickupUnit().dispose();
+			DataProvider.orientationUnit().dispose();
+			DataProvider.communicationUnit().dispose();
+			System.exit(0);
 		}
 	}
 }

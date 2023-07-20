@@ -5,7 +5,15 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import lejos.hardware.Sound;
+import pickachu.components.DataProvider;
 
+
+/**
+ * OUT OF ORDER
+ * 
+ * Component for playing sounds randomly and on demand. Sounds where ment to be places in the rsc folder
+ * but this component currently does not work.
+ */
 public class SoundUnit {
 	
 	private volatile boolean running = true;
@@ -16,7 +24,6 @@ public class SoundUnit {
 	private final List<Sounds> pickachuSounds;
 
 	public SoundUnit() {
-		System.out.println("Creating SoundUnit");
 		pickachuSounds = Arrays.asList(Sounds.Pika1, Sounds.Pika2, Sounds.Pika3, Sounds.Pika4, Sounds.Pika5);
 		eventGenerator  = new Worker();
 		eventGenerator.start();
@@ -27,12 +34,17 @@ public class SoundUnit {
 	}
 	
 	public void playSound(Sounds sound) {
-		Sound.playSample(new File(sound.filename), Sound.VOL_MAX);
+		File file = new File(DataProvider.getFileSystem().getPath(sound.filename).toString());
+		Sound.playSample(file, Sound.VOL_MAX);
 	}
 	
 	
 	/**
 	 * Organizes Sound files
+	 * 
+	 * rsc/sounds/<filename> will point to the rsc/sounds folder,
+	 * <filename> only will point towards the lejos programs folder
+	 * (Neither did work)
 	 */
 	public enum Sounds{
 		Pika1("pikachu_sound_1.wav"),
@@ -45,12 +57,16 @@ public class SoundUnit {
 		;
 		
 		final String filename;
+		final String prefix = "rsc/sounds/";
 		
 		Sounds(String filename) {
-			this.filename = filename;
+			this.filename = prefix + filename;
 		}
 	}
 	
+	/**
+	 * Generates random sound events in random intervals.
+	 */
 	private class Worker extends Thread{
 		
 		Random random = new Random();

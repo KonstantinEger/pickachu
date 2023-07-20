@@ -43,4 +43,16 @@ public class Message {
 		}
 		return sBuilder.toString();
 	}
+	
+	/**
+	 * Builds an acknowledgement message for the input message
+	 */
+	public Message acknowledge() {
+		 String[] responseContent = new String[content.length + 1];
+		 responseContent[0] = opCode.name();
+		 for (int index = 0; index < content.length; index++) {
+			 responseContent[index+1]= content[index];
+		 }
+		 return new Message(OpCode.Ack, responseContent);
+	}
 }

@@ -1,49 +1,55 @@
 package pickachu.components.motors;
 
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Future;
 
 import lejos.hardware.motor.EV3MediumRegulatedMotor;
 import lejos.hardware.port.MotorPort;
 import lejos.robotics.RegulatedMotor;
 import pickachu.components.Worker;
-import pickachu.components.Action;
+import pickachu.components.Disposable;
 import pickachu.components.SimpleAction;
 
-public class PickupUnit {
+/**
+ * Provides an abstraction to access the underlyig hardware interface provided by lejos.
+ * This component controls two one motor and handles picking up / dropping objects.
+ */
+public class PickupUnit implements Disposable{
 	
-	private static final int ROTATION = 135;
+	private static final int ROTATION = 1485;
 	private final RegulatedMotor motor;
-	private final BlockingQueue<Action> bus;
-	private final Worker worker;
+	private final Worker picker;
 	
 	public PickupUnit() {
 		motor = new EV3MediumRegulatedMotor(MotorPort.C);
-		bus = new LinkedBlockingQueue<Action>();
-		worker = new Worker(bus, 2);
+		motor.setSpeed(500);
+		picker = new Worker(0);
 	}
 	
-	public void pickUp() {
-		bus.add(new SimpleAction() {
+	public Future<?> pickUp() {
+		Future<?> task =  picker.submit(new SimpleAction() {
 			@Override
 			public void execute() {
 				motor.rotate(-ROTATION);
 			}
 		});
+		
+		return task;
 	}
 	
-	public void drop() {
-		bus.add(new SimpleAction() {
+	public Future<?> drop() {
+		Future<?> task = picker.submit(new SimpleAction() {
 			@Override
 			public void execute() {
 				motor.rotate(ROTATION);
 			}
 		});
+		
+		return task;
 	}
 	
+	@Override
 	public void dispose() {
-		worker.kill();
-		bus.clear();
+		picker.stop();
 	}
 
 }

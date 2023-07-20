@@ -7,9 +7,10 @@ import lejos.hardware.port.SensorPort;
 import lejos.hardware.sensor.EV3GyroSensor;
 import lejos.robotics.SampleProvider;
 import lejos.utility.Delay;
+import pickachu.components.Disposable;
 import pickachu.components.Observer;
 
-public class OrientationUnit {
+public class OrientationUnit implements Disposable {
 		private final EV3GyroSensor gyroSensor;
 		private final SampleProvider sampleProvider;
 		private final Worker worker;
@@ -42,7 +43,8 @@ public class OrientationUnit {
 			observers.remove(observer);
 		}
 		
-		public void stop() {
+		@Override
+		public void dispose() {
 			running = false;
 			observers.clear();
 		}

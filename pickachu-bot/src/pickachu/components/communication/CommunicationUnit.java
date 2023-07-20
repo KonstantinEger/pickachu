@@ -6,12 +6,14 @@ import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 
+import pickachu.components.Disposable;
+
 
 /**
  * Contains all the logic necessary to send/receive tcp messages that arrive via the enclosed Socket Object
  * It offers a "comfortable" abstracted way of sending/receiving messages.
  */
-public class CommunicationUnit extends WebSocketServer {
+public class CommunicationUnit extends WebSocketServer implements Disposable{
 	
 	public static InetSocketAddress address = new InetSocketAddress(8081);
 	private MessageHandler handler;
@@ -38,17 +40,11 @@ public class CommunicationUnit extends WebSocketServer {
 	
 
 	@Override
-	public void onClose(WebSocket arg0, int arg1, String arg2, boolean arg3) {
-		// TODO Auto-generated method stub
-		
-	}
+	public void onClose(WebSocket arg0, int arg1, String arg2, boolean arg3) {	}
 
 
 	@Override
-	public void onError(WebSocket arg0, Exception arg1) {
-		// TODO Auto-generated method stub
-		
-	}
+	public void onError(WebSocket arg0, Exception arg1) {	}
 
 
 	@Override
@@ -62,15 +58,19 @@ public class CommunicationUnit extends WebSocketServer {
 
 
 	@Override
-	public void onOpen(WebSocket arg0, ClientHandshake arg1) {
-		// TODO Auto-generated method stub
-		
-	}
+	public void onOpen(WebSocket arg0, ClientHandshake arg1) {	}
 
 
 	@Override
-	public void onStart() {
-		// TODO Auto-generated method stub
-		
+	public void onStart() {	}
+	
+	@Override
+	public void dispose() {
+		try {
+			this.stop();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 }

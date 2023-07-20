@@ -9,38 +9,36 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
 
+import pickachu.components.ComponentInitializationError;
 import pickachu.components.DataProvider;
+import pickachu.components.Disposable;
 
 
-public class Webserver {
+public class Webserver implements Disposable{
 	
 	public static final int port = 8080;
 	private final ServerSocket socket;
 	private final Worker worker;
 	private volatile boolean running;
-	private static Webserver instance;
 
-	private Webserver() throws IOException{
-		socket = new ServerSocket(port);
+	public Webserver(){
+		try {
+			socket = new ServerSocket(port);
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw new ComponentInitializationError("Webserver could not be initialized.");
+		}
 		worker = new Worker();
 	}
-	
-
-    public static Webserver getInstance() throws IOException {
-    	if (instance == null) {
-    		instance = new Webserver();
-    	}
-    	return instance;
-    }
     
     public void host() {
     	running = true;
 		worker.start();
     }
     
-    public void kill() {
+	@Override
+    public void dispose() {
     	running = false;
-    	instance = null;
     }
     
     private class Worker extends Thread {

@@ -8,7 +8,6 @@ import java.util.Map;
  */
 public enum OpCode {
 	NoOp, //not viable
-	Stop,
 	Forward, // rotations
 	Left, // rotations
 	Right, // rotations

@@ -2,97 +2,97 @@ package pickachu.components.motors;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Future;
 
+import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.hardware.motor.EV3MediumRegulatedMotor;
 import lejos.hardware.port.MotorPort;
 import lejos.robotics.RegulatedMotor;
 import pickachu.components.Worker;
-import pickachu.components.Action;
 import pickachu.components.SimpleAction;
+import pickachu.components.Disposable;
 import pickachu.components.MultiAction;
 
 
-
-public class DriverUnit {
+/**
+ * Provides an abstraction to access the underlyig hardware interface provided by lejos.
+ * This component controls two motors to make the robot able to move in space.
+ */
+public class DriverUnit implements Disposable {
 	
 	private final RegulatedMotor leftMotor;
 	private final RegulatedMotor rightMotor;
-	
-	private final BlockingQueue<Action> bus;
 	private final Worker driver;
+	private static final int SPEED = 100; //100;
 	
 	
 	public DriverUnit() {
-		leftMotor = new EV3MediumRegulatedMotor(MotorPort.A);  // todo das sollten large motoren sein
-		rightMotor = new EV3MediumRegulatedMotor(MotorPort.B);
-		//leftMotor.setSpeed(250);
-		//rightMotor.setSpeed(250);
-		leftMotor.setSpeed(150);
-		rightMotor.setSpeed(150);
-		bus = new LinkedBlockingQueue<Action>();
-		driver = new Worker(bus, 2);
+		leftMotor = new EV3LargeRegulatedMotor(MotorPort.B);
+		rightMotor = new EV3LargeRegulatedMotor(MotorPort.A);
+		leftMotor.setSpeed(SPEED);
+		rightMotor.setSpeed(SPEED);
+		driver = new Worker(2);
 	}
 
-	public void left(final int degrees) {
-		this.right(-degrees);
+	public Future<?> left(final int degrees) {
+		return this.right(-degrees);
 	}
 	
-	public void right(final int degrees) {
-		bus.add(new MultiAction(){
+	public Future<?> right(final int degrees) {
+		
+		Future<?> task = driver.submit(new MultiAction(){
 
 			@Override
 			public List<SimpleAction> getActions() {
 				return Arrays.asList(
-						new SimpleAction() {
-							@Override
-							public void execute() {
-								rightMotor.rotate(degrees);
-							}
-						},
-						new SimpleAction() {
-							@Override
-							public void execute() {
-								leftMotor.rotate(-degrees);
-							}
+					new SimpleAction() {
+						@Override
+						public void execute() {
+							rightMotor.rotate(-degrees);
 						}
+					},
+					new SimpleAction() {
+						@Override
+						public void execute() {
+							leftMotor.rotate(+degrees);
+						}
+					}
 				);
 			}
 			
 		});
+		
+		return task;
 	}
 	
-	public void forward(final int degrees) {
-		bus.add(new MultiAction(){
+	public Future<?> forward(final int degrees) {
+		Future<?> task = driver.submit(new MultiAction(){
 
 			@Override
 			public List<SimpleAction> getActions() {
 				return Arrays.asList(
-						new SimpleAction() {
-							@Override
-							public void execute() {
-								rightMotor.rotate(degrees);
-							}
-						},
-						new SimpleAction() {
-							@Override
-							public void execute() {
-								leftMotor.rotate(degrees);
-							}
+					new SimpleAction() {
+						@Override
+						public void execute() {
+							rightMotor.rotate(degrees);
 						}
+					},
+					new SimpleAction() {
+						@Override
+						public void execute() {
+							leftMotor.rotate(degrees);
+						}
+					}
 				);
 			}
+			
 		});
+		
+		return task;
 	}
 	
-	public void stop() {
-		bus.clear();
-	}
-	
-
+	@Override
 	public void dispose() {
-		driver.kill();
-		stop();
+		driver.stop();
 	}
 }

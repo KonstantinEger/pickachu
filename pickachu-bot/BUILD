@@ -1,7 +1,7 @@
-load("//toolchains/java:def.bzl", "java_library")
+load("//toolchains/java:def.bzl", "java_library", "java_binary")
 
 java_library(
-    name = "pickachu-bot",
+    name = "pickachu-bot-lib",
     srcs = glob(["src/pickachu/**/*.java"]),
     deps = [
         "//pickachu-bot/lib:ev3classes",
@@ -13,4 +13,10 @@ java_library(
         "//client:files",
         "//pickachu-bot/rsc:sounds"
     ],
+)
+
+java_binary(
+    name = "pickachu-bot",
+    lib = ":pickachu-bot-lib",
+    mainclass = "pickachu.bot.PickachuBot"
 )

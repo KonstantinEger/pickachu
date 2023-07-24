@@ -1,23 +1,28 @@
-load("//toolchains/java:def.bzl", "jar_library")
+load("@rules_java//java:defs.bzl", "java_import")
 
 package(default_visibility = ["//visibility:public"])
 
-jar_library(
+java_import(
+    name = "dbusjava",
+    jars = ["dbusjava.jar"],
+)
+
+java_import(
     name = "ev3classes",
-    jar = "ev3classes.jar",
+    jars = ["ev3classes.jar"],
 )
 
-jar_library(
+java_import(
     name = "websocket",
-    jar = "Java-WebSocket-1.5.3.jar",
+    jars = ["Java-WebSocket-1.5.3.jar"],
 )
 
-jar_library(
+java_import(
     name = "slf4j-api",
-    jar = "slf4j-api-1.7.25.jar",
+    jars = ["slf4j-api-1.7.25.jar"],
 )
 
-jar_library(
+java_import(
     name = "slf4j-simple",
-    jar = "slf4j-simple-1.7.25.jar",
+    jars = ["slf4j-simple-1.7.25.jar"],
 )
